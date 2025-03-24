@@ -1,7 +1,7 @@
 const { jsPDF } = require("jspdf"); // will automatically load the node version
+const moment = require("moment"); // Biblioteca para manipulação de datas
 
 function gerarPDF(dados) {
-  console.log("dados " + dados);
   const doc = new jsPDF();
 
   // Título do documento
@@ -23,7 +23,15 @@ function gerarPDF(dados) {
 
     if (turma.presentes.length > 0) {
       turma.presentes.forEach((presente) => {
-        doc.text(`- ${presente.nome} (Entrada: ${presente.horarioEntrada})`, 10, y);
+        // Ajusta o horário de entrada subtraindo 3 horas
+        let horarioEntrada = presente.horarioEntrada;
+        if (horarioEntrada && horarioEntrada !== "N/A") {
+          horarioEntrada = moment(horarioEntrada, "HH:mm")
+            .subtract(3, "hours")
+            .format("HH:mm");
+        }
+
+        doc.text(`- ${presente.nome} (Entrada: ${horarioEntrada})`, 10, y);
         y += 10;
 
         // Verifica se a posição Y ultrapassou o limite da página
