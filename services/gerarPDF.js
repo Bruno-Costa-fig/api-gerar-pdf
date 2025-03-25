@@ -4,6 +4,7 @@ const moment = require("moment"); // Biblioteca para manipulação de datas
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
+  console.log(dados);
 
   // Função para adicionar cabeçalho
   const addHeader = () => {
@@ -22,7 +23,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   // Adiciona o conteúdo do PDF
-  dados.forEach((turma, index) => {
+  dados.turmas.forEach((turma, index) => {
     // Adiciona uma nova página para cada turma (exceto a primeira)
     if (index > 0) {
       doc.addPage();

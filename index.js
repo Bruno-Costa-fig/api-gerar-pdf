@@ -21,14 +21,22 @@ app.post('/gerarPDF', async (req, res) => {
     // Verifica se os dados foram enviados
     const dados = req.body;
 
-    if (!dados || !Array.isArray(dados)) {
+    if (!dados) {
       res.status(400).send('Dados inválidos ou não informados');
       return;
     }
 
     // Converte as propriedades do JSON para letras minúsculas
-    const dadosConvertidos = dados.map((turma) => ({
+    const dadosTotais = {
+      turmas: dados.Turmas,
+      totalPresentes: dados.TotalPresentes,
+      totalAusentes: dados.TotalAusentes,
+    }
+
+    dadosTotais.turmas = dados.Turmas.map((turma) => ({
       turma: turma.Turma,
+      totalPresentes: turma.TotalPresentes,
+      totalAusentes: turma.TotalAusentes,
       presentes: turma.Presentes.map((presente) => ({
         nome: presente.Nome,
         horarioEntrada: presente.HorarioEntrada,
@@ -40,7 +48,7 @@ app.post('/gerarPDF', async (req, res) => {
     }));
 
     // Gera o conteúdo do PDF
-    const pdfBuffer = await gerarPDF(dadosConvertidos, logoEscolaBase64, logoPresencaBase64);
+    const pdfBuffer = await gerarPDF(dadosTotais, logoEscolaBase64, logoPresencaBase64);
 
     // Define o nome do arquivo
     const fileName = 'relatorio.pdf';
