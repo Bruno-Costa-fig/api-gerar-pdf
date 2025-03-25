@@ -22,11 +22,17 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   // Adiciona o conteúdo do PDF
-  let y = 50; // Posição inicial no eixo Y após o cabeçalho
-
   dados.forEach((turma, index) => {
-    // Adiciona o cabeçalho e o rodapé em cada página
+    // Adiciona uma nova página para cada turma (exceto a primeira)
+    if (index > 0) {
+      doc.addPage();
+      currentPage++;
+    }
+
+    // Adiciona o cabeçalho e o rodapé
     addHeader();
+
+    let y = 50; // Posição inicial no eixo Y após o cabeçalho
 
     // Adiciona o título da turma
     doc.setFontSize(14);
@@ -88,22 +94,8 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       y += 10;
     }
 
-    // Adiciona um espaço entre as turmas
-    y += 10;
-
-    // Verifica se a posição Y ultrapassou o limite da página
-    if (y > 260) {
-      addFooter(); // Adiciona o rodapé antes de criar uma nova página
-      doc.addPage();
-      currentPage++;
-      y = 50; // Reinicia a posição Y
-      addHeader(); // Adiciona o cabeçalho na nova página
-    }
-
-    // Adiciona o rodapé na última página
-    if (index === dados.length - 1) {
-      addFooter();
-    }
+    // Adiciona o rodapé na última página da turma
+    addFooter();
   });
 
   // Retorna o conteúdo do PDF como um buffer
