@@ -4,7 +4,6 @@ const moment = require("moment"); // Biblioteca para manipulação de datas
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
-  console.log(dados);
 
   // Função para adicionar cabeçalho
   const addHeader = () => {
@@ -22,32 +21,39 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
   };
 
-  // Adiciona o conteúdo do PDF
-  dados.turmas.forEach((turma, index) => {
-    // Adiciona uma nova página para cada turma (exceto a primeira)
-    if (index > 0) {
-      doc.addPage();
-      currentPage++;
-    }
+  // Adiciona a tabela de totais na primeira página
+  const addTotalsTable = () => {
+    let y = 50; // Posição inicial no eixo Y
+    doc.setFontSize(14);
+    doc.text("Resumo Geral", 10, y);
+    y += 10;
 
-    // Adiciona o cabeçalho e o rodapé
-    addHeader();
+    doc.setFontSize(12);
+    doc.text(`Total de Alunos Presentes: ${dados.totalPresentes}`, 10, y);
+    y += 10;
+    doc.text(`Total de Alunos Ausentes: ${dados.totalAusentes}`, 10, y);
+    y += 20;
 
-    let y = 50; // Posição inicial no eixo Y após o cabeçalho
+    return y; // Retorna a posição Y para continuar o conteúdo
+  };
 
-    // Adiciona o título da turma
+  // Adiciona os detalhes de cada turma
+  const addTurmaDetails = (turma, y) => {
     doc.setFontSize(14);
     doc.text(`Turma: ${turma.turma}`, 10, y);
     y += 10;
 
-    // Adiciona os presentes
     doc.setFontSize(12);
+    doc.text(`Total Presentes: ${turma.totalPresentes}`, 10, y);
+    y += 10;
+    doc.text(`Total Ausentes: ${turma.totalAusentes}`, 10, y);
+    y += 10;
+
     doc.text("Presentes:", 10, y);
     y += 10;
 
     if (turma.presentes.length > 0) {
       turma.presentes.forEach((presente) => {
-        // Ajusta o horário de entrada subtraindo 3 horas
         let horarioEntrada = presente.horarioEntrada;
         if (horarioEntrada && horarioEntrada !== "N/A") {
           horarioEntrada = moment(horarioEntrada, "HH:mm")
@@ -60,11 +66,11 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
         // Verifica se a posição Y ultrapassou o limite da página
         if (y > 260) {
-          addFooter(); // Adiciona o rodapé antes de criar uma nova página
+          addFooter();
           doc.addPage();
           currentPage++;
-          y = 50; // Reinicia a posição Y
-          addHeader(); // Adiciona o cabeçalho na nova página
+          addHeader();
+          y = 50;
         }
       });
     } else {
@@ -72,7 +78,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       y += 10;
     }
 
-    // Adiciona os ausentes
     doc.text("Ausentes:", 10, y);
     y += 10;
 
@@ -83,11 +88,11 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
         // Verifica se a posição Y ultrapassou o limite da página
         if (y > 260) {
-          addFooter(); // Adiciona o rodapé antes de criar uma nova página
+          addFooter();
           doc.addPage();
           currentPage++;
-          y = 50; // Reinicia a posição Y
-          addHeader(); // Adiciona o cabeçalho na nova página
+          addHeader();
+          y = 50;
         }
       });
     } else {
@@ -95,7 +100,23 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       y += 10;
     }
 
-    // Adiciona o rodapé na última página da turma
+    return y;
+  };
+
+  // Gera o PDF
+  addHeader();
+  let y = addTotalsTable(); // Adiciona a tabela de totais na primeira página
+  addFooter();
+
+  dados.turmas.forEach((turma, index) => {
+    if (index > 0 || y > 260) {
+      doc.addPage();
+      currentPage++;
+      addHeader();
+      y = 50;
+    }
+
+    y = addTurmaDetails(turma, y);
     addFooter();
   });
 
