@@ -1,5 +1,5 @@
-const { jsPDF } = require("jspdf");
-const { autoTable } = require('jspdf-autotable')  // Biblioteca para geração de PDFs
+const { jsPDF } = require("jspdf"); // Biblioteca para geração de PDFs
+const { autoTable } = require('jspdf-autotable') // Biblioteca para criação de tabelas
 const moment = require("moment"); // Biblioteca para manipulação de datas
 
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
@@ -29,84 +29,54 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     doc.text("Resumo Geral", 10, y);
     y += 10;
 
+    // Cria a tabela com os totais
     autoTable(doc, {
       startY: y,
       head: [["Total Presentes", "Total Ausentes"]],
       body: [[dados.totalPresentes, dados.totalAusentes]],
     });
 
-    // doc.setFontSize(12);
-    // doc.text(`Total de Alunos Presentes: ${dados.totalPresentes}`, 10, y);
-    // y += 10;
-    // doc.text(`Total de Alunos Ausentes: ${dados.totalAusentes}`, 10, y);
-    // y += 20;
-    addFooter();
-    doc.addPage();
-    currentPage++;
-    addHeader();
-    y = 50;
-    return y; // Retorna a posição Y para continuar o conteúdo
+    return doc.lastAutoTable.finalY + 10; // Retorna a posição Y após a tabela
   };
 
-  // Adiciona os detalhes de cada turma
-  const addTurmaDetails = (turma, y) => {
+  // Adiciona os detalhes de cada turma em forma de tabela
+  const addTurmaDetails = (turma) => {
     doc.setFontSize(14);
-    doc.text(`Turma: ${turma.turma}`, 10, y);
-    y += 10;
+    doc.text(`Turma: ${turma.turma}`, 10, 50);
 
-    doc.setFontSize(12);
-    doc.text(`Total Presentes: ${turma.totalPresentes}`, 10, y);
-    y += 10;
-    doc.text(`Total Ausentes: ${turma.totalAusentes}`, 10, y);
-    y += 10;
-
-    doc.text("Lista de Alunos:", 10, y);
-    y += 5;
-
-
-    autoTable(doc, {
-      startY: y,
+    // Cria a tabela com os detalhes da turma
+    autoTable(doc,{
+      startY: 60,
       head: [["Nome", "Horário de Entrada"]],
       body: [
         ...turma.presentes.map((presente) => [
           presente.nome,
           presente.horarioEntrada !== "N/A"
             ? moment(presente.horarioEntrada, "HH:mm")
-              .subtract(3, "hours")
-              .format("HH:mm")
+                .subtract(3, "hours")
+                .format("HH:mm")
             : "N/A",
         ]),
         ...turma.ausentes.map((ausente) => [ausente.nome, "Ausente"]),
       ],
     });
-    y += 10 * turma.presentes.length;
 
-    // Verifica se a posição Y ultrapassou o limite da página
-    if (y > 260) {
-      addFooter();
-      doc.addPage();
-      currentPage++;
-      addHeader();
-      y = 50;
-    }
-
-    return y;
+    return doc.lastAutoTable.finalY + 10; // Retorna a posição Y após a tabela
   };
 
   // Gera o PDF
   addHeader();
-  let y = addTotalsTable();
+  let y = addTotalsTable(); // Adiciona a tabela de totais na primeira página
   addFooter();
 
   dados.turmas.forEach((turma, index) => {
-    if (index > 0 || y > 260) {
+    if (index > 0) {
       doc.addPage();
       currentPage++;
       addHeader();
-      y = 50;
     }
 
-    y = addTurmaDetails(turma, y);
+    addTurmaDetails(turma);
     addFooter();
   });
 
