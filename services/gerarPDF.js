@@ -1,16 +1,33 @@
-const { jsPDF } = require("jspdf"); // will automatically load the node version
+const { jsPDF } = require("jspdf"); // Biblioteca para geração de PDFs
 const moment = require("moment"); // Biblioteca para manipulação de datas
 
-function gerarPDF(dados) {
+async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
+  let currentPage = 1;
 
-  // Título do documento
-  doc.setFontSize(16);
-  doc.text("Relatório de Presença", 10, 10);
+  // Função para adicionar cabeçalho
+  const addHeader = () => {
+    doc.addImage(logoEscolaBase64, "PNG", 10, 10, 30, 30); // Adiciona a logo da escola
+    doc.setFontSize(14);
+    doc.text("EEMTI Edson Luiz Cavalcante de Gouvêa", 50, 20); // Nome da escola
+    doc.setFontSize(12);
+    doc.text("Relatório de Presença", 50, 30); // Subtítulo do relatório
+  };
 
-  let y = 20; // Posição inicial no eixo Y
+  // Função para adicionar rodapé
+  const addFooter = () => {
+    doc.setFontSize(10);
+    doc.text(`Página ${currentPage}`, 10, 290); // Número da página no lado esquerdo
+    doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
+  };
 
-  dados.forEach((turma) => {
+  // Adiciona o conteúdo do PDF
+  let y = 50; // Posição inicial no eixo Y após o cabeçalho
+
+  dados.forEach((turma, index) => {
+    // Adiciona o cabeçalho e o rodapé em cada página
+    addHeader();
+
     // Adiciona o título da turma
     doc.setFontSize(14);
     doc.text(`Turma: ${turma.turma}`, 10, y);
@@ -35,9 +52,12 @@ function gerarPDF(dados) {
         y += 10;
 
         // Verifica se a posição Y ultrapassou o limite da página
-        if (y > 280) {
+        if (y > 260) {
+          addFooter(); // Adiciona o rodapé antes de criar uma nova página
           doc.addPage();
-          y = 10;
+          currentPage++;
+          y = 50; // Reinicia a posição Y
+          addHeader(); // Adiciona o cabeçalho na nova página
         }
       });
     } else {
@@ -55,9 +75,12 @@ function gerarPDF(dados) {
         y += 10;
 
         // Verifica se a posição Y ultrapassou o limite da página
-        if (y > 280) {
+        if (y > 260) {
+          addFooter(); // Adiciona o rodapé antes de criar uma nova página
           doc.addPage();
-          y = 10;
+          currentPage++;
+          y = 50; // Reinicia a posição Y
+          addHeader(); // Adiciona o cabeçalho na nova página
         }
       });
     } else {
@@ -69,15 +92,23 @@ function gerarPDF(dados) {
     y += 10;
 
     // Verifica se a posição Y ultrapassou o limite da página
-    if (y > 280) {
+    if (y > 260) {
+      addFooter(); // Adiciona o rodapé antes de criar uma nova página
       doc.addPage();
-      y = 10;
+      currentPage++;
+      y = 50; // Reinicia a posição Y
+      addHeader(); // Adiciona o cabeçalho na nova página
+    }
+
+    // Adiciona o rodapé na última página
+    if (index === dados.length - 1) {
+      addFooter();
     }
   });
 
-  // Retorna o conteúdo do PDF como uma string em formato URI
-  const pdfContent = doc.output("datauristring");
-  return pdfContent;
+  // Retorna o conteúdo do PDF como um buffer
+  const pdfContent = doc.output("arraybuffer");
+  return Buffer.from(pdfContent);
 }
 
 module.exports = gerarPDF;

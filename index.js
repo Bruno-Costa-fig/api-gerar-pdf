@@ -1,14 +1,20 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 const port = 3003;
 
 app.use(express.json());
 
+// Lê os arquivos Base64 das logos
+const logoEscolaBase64 = fs.readFileSync(path.join(__dirname, 'logosBase64', 'edson.txt'), 'utf-8');
+const logoPresencaBase64 = fs.readFileSync(path.join(__dirname, 'logosBase64', 'presencamais.txt'), 'utf-8');
+
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.post('/gerarPDF', (req, res) => {
+app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
   
   try {
@@ -34,11 +40,7 @@ app.post('/gerarPDF', (req, res) => {
     }));
 
     // Gera o conteúdo do PDF
-    const pdfContent = gerarPDF(dadosConvertidos);
-
-    // Converte o conteúdo base64 para um buffer
-    const base64Data = pdfContent.split(',')[1];
-    const pdfBuffer = Buffer.from(base64Data, 'base64');
+    const pdfBuffer = await gerarPDF(dadosConvertidos, logoEscolaBase64, logoPresencaBase64);
 
     // Define o nome do arquivo
     const fileName = 'relatorio.pdf';
