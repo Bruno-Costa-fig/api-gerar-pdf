@@ -1,19 +1,33 @@
 const { jsPDF } = require("jspdf");
-const { autoTable } = require('jspdf-autotable')  // Biblioteca para geração de PDFs
-const moment = require("moment"); // Biblioteca para manipulação de datas
+const { autoTable } = require('jspdf-autotable');
+const moment = require("moment");
 
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
 
-  // Função para adicionar cabeçalho
   const addHeader = () => {
-    doc.addImage(logoEscolaBase64, "PNG", 10, 10, 30, 30); // Adiciona a logo da escola
-    doc.setFontSize(14);
-    doc.text("EEMTI Edson Luiz Cavalcante de Gouvêa", 50, 20); // Nome da escola
+    doc.addImage(logoEscolaBase64, "PNG", 10, 10, 30, 30); 
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("EEMTI Edson Luiz Cavalcante de Gouvêa", 50, 20); 
     doc.setFontSize(12);
-    doc.text("Relatório de Presença", 50, 30); // Subtítulo do relatório
+    doc.text(`Relatório de Presença - ${dados.data}`, 50, 30); 
+    doc.setFont("helvetica", "normal");
   };
+
+  const centralizarTexto = (text, y, bold = false) => {
+    if (bold) {
+      doc.setFont("helvetica", "bold");
+    }
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const textWidth = doc.getTextWidth(text);
+    const x = (pageWidth - textWidth) / 2; // Calcula a posição X para centralizar
+    doc.text(text, x, y);
+    if (bold) {
+      doc.setFont("helvetica", "normal");
+    }
+  }
 
   // Função para adicionar rodapé
   const addFooter = () => {
@@ -26,7 +40,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const addTotalsTable = () => {
     let y = 50; // Posição inicial no eixo Y
     doc.setFontSize(14);
-    doc.text("Resumo Geral", 10, y);
+    centralizarTexto("Resumo Geral", y, true);
     y += 10;
 
     autoTable(doc, {
@@ -50,36 +64,59 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
   // Adiciona os detalhes de cada turma
   const addTurmaDetails = (turma, y) => {
-    doc.setFontSize(14);
-    doc.text(`Turma: ${turma.turma}`, 10, y);
+    doc.setFontSize(16);
+    centralizarTexto(`Turma: ${turma.turma}`, y, true);
     y += 10;
-
-    doc.setFontSize(12);
-    doc.text(`Total Presentes: ${turma.totalPresentes}`, 10, y);
-    y += 10;
-    doc.text(`Total Ausentes: ${turma.totalAusentes}`, 10, y);
-    y += 10;
-
-    doc.text("Lista de Alunos:", 10, y);
-    y += 5;
-
 
     autoTable(doc, {
       startY: y,
-      head: [["Nome", "Horário de Entrada"]],
+      head: [["Total Presentes", "Total Ausentes"]],
       body: [
-        ...turma.presentes.map((presente) => [
-          presente.nome,
-          presente.horarioEntrada !== "N/A"
-            ? moment(presente.horarioEntrada, "HH:mm")
-              .subtract(3, "hours")
-              .format("HH:mm")
-            : "N/A",
-        ]),
-        ...turma.ausentes.map((ausente) => [ausente.nome, "Ausente"]),
+        [turma.totalPresentes, turma.totalAusentes]
       ],
     });
-    y += 10 * turma.presentes.length;
+
+    y += 30;
+
+    doc.setFontSize(14);
+    centralizarTexto("Lista de Alunos:", y, true);
+    y += 10;
+
+    if (turma.presentes.length > 0) {
+
+      doc.setFontSize(12);
+      centralizarTexto("Presentes:", y, true);
+      y += 5;
+      autoTable(doc, {
+        startY: y,
+        head: [["Nome", "Horário de Entrada"]],
+        body: [
+          ...turma.presentes.map((presente) => [
+            presente.nome,
+            presente.horarioEntrada !== "N/A"
+              ? moment(presente.horarioEntrada, "HH:mm")
+                .subtract(3, "hours")
+                .format("HH:mm")
+              : "N/A",
+          ]),
+        ],
+      });
+      y += 8 * turma.presentes.length;
+      y += 15;
+    }
+
+    if (turma.ausentes.length > 0) {
+      doc.setFontSize(12);
+      centralizarTexto("Ausentes:", y, true);
+      y += 5;
+      autoTable(doc, {
+        startY: y,
+        head: [["Nome"]],
+        body: [
+          ...turma.ausentes.map((ausente) => [ausente.nome]),
+        ],
+      });
+    }
 
     // Verifica se a posição Y ultrapassou o limite da página
     if (y > 260) {
@@ -99,6 +136,9 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   addFooter();
 
   dados.turmas.forEach((turma, index) => {
+    if(turma.ausentes.length === 0 && turma.presentes.length === 0) {
+      return;
+    }
     if (index > 0 || y > 260) {
       doc.addPage();
       currentPage++;

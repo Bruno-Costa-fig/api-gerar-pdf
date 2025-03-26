@@ -30,6 +30,7 @@ app.post('/gerarPDF', async (req, res) => {
     const dadosTotais = {
       turmas: dados.Turmas,
       totalPresentes: dados.TotalPresentes,
+      data: dados.Data,
       totalAusentes: dados.TotalAusentes,
     }
 
