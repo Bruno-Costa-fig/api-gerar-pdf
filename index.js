@@ -7,8 +7,8 @@ const port = 3003;
 app.use(express.json());
 
 // Lê os arquivos Base64 das logos
-const logoEscolaBase64 = fs.readFileSync(path.join(__dirname, 'logosBase64', 'edson.txt'), 'utf-8');
-const logoPresencaBase64 = fs.readFileSync(path.join(__dirname, 'logosBase64', 'presencamais.txt'), 'utf-8');
+const logoEscolaBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'edson.txt'), 'utf-8');
+const logoPresencaBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'presencamais.txt'), 'utf-8');
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
