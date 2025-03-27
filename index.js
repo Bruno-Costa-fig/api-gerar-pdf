@@ -20,7 +20,6 @@ app.post('/gerarPDF', async (req, res) => {
   try {
     // Verifica se os dados foram enviados
     const dados = req.body;
-    console.log(dados)
 
     if (!dados) {
       res.status(400).send('Dados inválidos ou não informados');
