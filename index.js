@@ -72,6 +72,40 @@ app.post('/gerarPDF', async (req, res) => {
   }
 });
 
+app.post('/gerar-carteirinhas', async (req, res) => {
+  const {gerarPdfCarteirinhas} = require('./services/geradorCarteirinha');
+  try {
+    const dados = req.body;
+
+    const alunos = dados.Alunos.map((aluno) => ({
+      name: aluno.Name,
+      turma: aluno.Turma.Name,
+      qrCode: aluno.QrCode,
+    }));
+    const nomeEscola = dados.NomeEscola;
+
+    if (!alunos || !nomeEscola) {
+      return res.status(400).json({ error: 'Dados inválidos ou não informados' });
+    }
+
+    // Gera o PDF com as carteirinhas
+    const pdfBuffer = await gerarPdfCarteirinhas(alunos, nomeEscola);
+
+    // Define o nome do arquivo
+    const fileName = 'carteirinhas.pdf';
+
+    // Define os cabeçalhos para download do arquivo
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    // Envia o arquivo PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Erro ao gerar o PDF:', error);
+    res.status(500).send('Erro ao gerar o PDF');
+  }
+});
+
 app.listen(port, () => {
   console.log(`App listening at http://localhost:${port}`);
 });
