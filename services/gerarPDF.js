@@ -7,12 +7,17 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   let currentPage = 1;
 
   const addHeader = () => {
-    doc.addImage(logoEscolaBase64, "PNG", 10, 10, 30, 30); 
+    const imgProps = doc.getImageProperties(logoEscolaBase64);
+    const aspectRatio = imgProps.width / imgProps.height;
+    const maxDimension = 50; // Define um tamanho máximo para largura ou altura
+    const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
+    const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
+    doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("EEMTI Edson Luiz Cavalcante de Gouvêa", 50, 20); 
+    doc.text(dados.empresa, 70, 20); 
     doc.setFontSize(12);
-    doc.text(`Relatório de Presença - ${dados.data}`, 50, 30); 
+    doc.text(`Relatório de Presença - ${dados.data}`, 70, 30); 
     doc.setFont("helvetica", "normal");
   };
 

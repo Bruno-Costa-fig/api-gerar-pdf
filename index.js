@@ -7,7 +7,7 @@ const port = 3003;
 app.use(express.json());
 
 // Lê os arquivos Base64 das logos
-const logoEscolaBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'edson.txt'), 'utf-8');
+const logoEdsonBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'edson.txt'), 'utf-8');
 const logoPresencaBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'presencamais.txt'), 'utf-8');
 
 app.get('/', (req, res) => {
@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 
 app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
-  
+   let logoEscolaBase64 = logoPresencaBase64; // Logo padrão
   try {
     // Verifica se os dados foram enviados
     const dados = req.body;
@@ -28,10 +28,16 @@ app.post('/gerarPDF', async (req, res) => {
 
     // Converte as propriedades do JSON para letras minúsculas
     const dadosTotais = {
+      empresa: dados.Empresa,
+      organizationId: dados.OrganizationId,
       turmas: dados.Turmas,
       totalPresentes: dados.TotalPresentes,
       data: dados.Data,
       totalAusentes: dados.TotalAusentes,
+    }
+
+    if(dados.organizationId == 1){
+      logoEscolaBase64 = logoEdsonBase64;
     }
 
     dadosTotais.turmas = dados.Turmas.map((turma) => ({
