@@ -1,15 +1,71 @@
 const { jsPDF } = require("jspdf");
 const { autoTable } = require('jspdf-autotable');
 const moment = require("moment");
+const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
 
+  // Configuração do ChartJSNodeCanvas
+  const width = 800; // Largura do gráfico
+  const height = 400; // Altura do gráfico
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
+
+  // Função para gerar o gráfico de barras
+  const generateBarChart = async () => {
+    const labels = dados.turmas.map((turma) => turma.turma);
+    const presentes = dados.turmas.map((turma) => turma.totalPresentes);
+    const ausentes = dados.turmas.map((turma) => turma.totalAusentes);
+
+    const configuration = {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Presentes",
+            data: presentes,
+            backgroundColor: "rgba(75, 192, 192, 0.6)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1,
+          },
+          {
+            label: "Ausentes",
+            data: ausentes,
+            backgroundColor: "rgba(255, 99, 132, 0.6)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "top",
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+          },
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    };
+
+    // Gera o gráfico como uma imagem Base64
+    return await chartJSNodeCanvas.renderToDataURL(configuration);
+  };
+
+  // Função para adicionar cabeçalho
   const addHeader = () => {
     const imgProps = doc.getImageProperties(logoEscolaBase64);
     const aspectRatio = imgProps.width / imgProps.height;
-    const maxDimension = 50; // Define um tamanho máximo para largura ou altura
+    const maxDimension = 40; // Define um tamanho máximo para largura ou altura
     const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
     const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
@@ -42,7 +98,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   // Adiciona a tabela de totais na primeira página
-  const addTotalsTable = () => {
+  const addTotalsTable = async () => {
     let y = 50; // Posição inicial no eixo Y
     doc.setFontSize(14);
     centralizarTexto("Resumo Geral", y, true);
@@ -54,11 +110,9 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       body: [[dados.totalPresentes, dados.totalAusentes]],
     });
 
-    // doc.setFontSize(12);
-    // doc.text(`Total de Alunos Presentes: ${dados.totalPresentes}`, 10, y);
-    // y += 10;
-    // doc.text(`Total de Alunos Ausentes: ${dados.totalAusentes}`, 10, y);
-    // y += 20;
+      // Gera o gráfico de barras
+    const barChartBase64 = await generateBarChart();
+    doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
     addFooter();
     doc.addPage();
     currentPage++;
@@ -137,7 +191,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
   // Gera o PDF
   addHeader();
-  let y = addTotalsTable();
+  let y = await addTotalsTable(); // Adiciona a tabela de totais na primeira página
   addFooter();
 
   dados.turmas.forEach((turma, index) => {

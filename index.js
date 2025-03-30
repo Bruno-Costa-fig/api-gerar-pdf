@@ -35,8 +35,8 @@ app.post('/gerarPDF', async (req, res) => {
       data: dados.Data,
       totalAusentes: dados.TotalAusentes,
     }
-
-    if(dados.organizationId == 1){
+    console.log(dadosTotais.organizationId);
+    if(dadosTotais.organizationId == 1){
       logoEscolaBase64 = logoEdsonBase64;
     }
 
