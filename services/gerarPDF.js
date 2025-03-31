@@ -154,7 +154,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
             presente.nome,
             presente.horarioEntrada !== "N/A"
               ? moment(presente.horarioEntrada, "HH:mm")
-                .subtract(3, "hours")
+                // .subtract(3, "hours")
                 .format("HH:mm")
               : "N/A",
           ]),
