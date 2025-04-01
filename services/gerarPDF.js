@@ -145,26 +145,44 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
       doc.setFontSize(12);
       centralizarTexto("Presentes:", y, true);
-      y += 5;
+      y += 10;
       autoTable(doc, {
         startY: y,
-        head: [["Nome", "Horário de Entrada"]],
+        head: [["Nome", "Horário de Entrada", "Horário de Saída"]],
         body: [
           ...turma.presentes.map((presente) => [
             presente.nome,
-            presente.horarioEntrada !== "N/A"
+            presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
               ? moment(presente.horarioEntrada, "HH:mm")
                 // .subtract(3, "hours")
                 .format("HH:mm")
               : "N/A",
+            presente.horarioSaida !== "N/A"  && !!presente.horarioSaida
+              ? moment(presente.horarioSaida, "HH:mm")
+                // .subtract(3, "hours")
+                .format("HH:mm")
+              : "-",
           ]),
         ],
       });
       y += 8 * turma.presentes.length;
-      y += 15;
+      y += 10;
     }
 
+      // // Verifica se a posição Y ultrapassou o limite da página
+      // if (y > 260) {
+      //   addFooter();
+      //   doc.addPage();
+      //   currentPage++;
+      //   addHeader();
+      //   y = 50;
+      // }
+
     if (turma.ausentes.length > 0) {
+      if(y > 260) {
+        // y -= 190 - (8 * (turma.ausentes.length - 22));
+        y -= 260;
+      }
       doc.setFontSize(12);
       centralizarTexto("Ausentes:", y, true);
       y += 5;
@@ -178,6 +196,10 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     }
 
     // Verifica se a posição Y ultrapassou o limite da página
+    if(turma.ausentes.length == 0) {
+      return y;
+    }
+
     if (y > 260) {
       addFooter();
       doc.addPage();
