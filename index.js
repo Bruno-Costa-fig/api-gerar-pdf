@@ -4,7 +4,7 @@ const path = require('path');
 const app = express();
 const port = 3003;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 // Lê os arquivos Base64 das logos
 const logoEdsonBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'edson.txt'), 'utf-8');
@@ -74,6 +74,7 @@ app.post('/gerarPDF', async (req, res) => {
 
 app.post('/gerar-carteirinhas', async (req, res) => {
   const {gerarPdfCarteirinhas} = require('./services/geradorCarteirinha');
+  const {gerarPdfCarteirinhasModelo2} = require('./services/geradorCarteirinhaModelo2');
   try {
     const dados = req.body;
 
@@ -89,7 +90,13 @@ app.post('/gerar-carteirinhas', async (req, res) => {
     }
 
     // Gera o PDF com as carteirinhas
-    const pdfBuffer = await gerarPdfCarteirinhas(alunos, nomeEscola);
+    let pdfBuffer;
+
+    if(!!req.query.modelo && req.query.modelo == 2){
+      pdfBuffer = await gerarPdfCarteirinhasModelo2(alunos, nomeEscola);
+    } else {
+      pdfBuffer = await gerarPdfCarteirinhas(alunos, nomeEscola);
+    }
 
     // Define o nome do arquivo
     const fileName = 'carteirinhas.pdf';
