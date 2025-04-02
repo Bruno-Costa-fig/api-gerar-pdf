@@ -178,7 +178,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     countTurmas++;
     doc.setFontSize(16);
     centralizarTexto(`Turma: ${turma.turma}`, y, true);
-    y += 10;
+    y += 5;
 
     // Adiciona a tabela de totais da turma
     autoTable(doc, {
@@ -225,10 +225,11 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     if (turma.presentes.length > 0) {
       doc.setFontSize(12);
       centralizarTexto("Presentes:", y, true);
-      y += 10;
+      y += 3;
       autoTable(doc, {
         startY: y,
         head: [["Nome", "Horário de Entrada", "Horário de Saída"]],
+        rowHeight: 6,
         body: turma.presentes.map((presente) => [
           presente.nome,
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
@@ -268,11 +269,12 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       }
       doc.setFontSize(12);
       centralizarTexto("Ausentes:", y, true);
-      y += 10;
+      y += 3;
       autoTable(doc, {
         startY: y,
         head: [["Nome"]],
         body: turma.ausentes.map((ausente) => [ausente.nome]),
+        rowHeight: 6,
         didParseCell: function (data) {
           if (data.section === 'body') { // Aplica estilos apenas às células do corpo
               if (data.row.index % 2 === 0) { // Linhas pares
@@ -291,7 +293,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       });
       y = doc.lastAutoTable.finalY + 10;
     }
-
 
     if(countTurmas === dados.turmas.length) {
       return
@@ -314,9 +315,8 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         datasets: [
           {
             data: [turma.totalPresentes, turma.totalAusentes],
-            backgroundColor: ["rgba(0, 128, 0, 0.6)", "rgba(161, 35, 16, 0.6)"], // Verde e vermelho
-            borderColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Bordas verde e vermelho
-            borderWidth: 1,
+            backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
+            borderWidth: 0,
           },
         ],
       },
