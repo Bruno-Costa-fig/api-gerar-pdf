@@ -2,6 +2,9 @@ const { jsPDF } = require("jspdf");
 const { autoTable } = require('jspdf-autotable');
 const moment = require("moment");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+const { loadImage } = require("canvas");
+const path = require("path");
+
 
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
@@ -18,48 +21,77 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     const presentes = dados.turmas.map((turma) => turma.totalPresentes);
     const ausentes = dados.turmas.map((turma) => turma.totalAusentes);
 
+    // Calcular a porcentagem de presença
+    const porcentagens = dados.turmas.map((turma) => {
+        const total = turma.totalPresentes + turma.totalAusentes;
+        return total > 0 ? (turma.totalPresentes / total) * 100 : 0;
+    });
+
+    // Define as cores das barras com base na porcentagem de presença
+    const backgroundColors = porcentagens.map((porcentagem) =>
+        porcentagem > 80 ? "rgba(0, 100, 0, 0.8)" : "rgba(0, 128, 0, 0.4)"
+    );
+    const borderColors = porcentagens.map((porcentagem) =>
+        porcentagem > 80 ? "rgba(0, 100, 0)" : "rgba(0, 128, 0)"
+    );
+
     const configuration = {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Presentes",
-            data: presentes,
-            backgroundColor: "rgba(0, 128, 0, 0.6)",
-            borderColor: "rgba(0, 128, 0)",
-            borderWidth: 1,
-          },
-          {
-            label: "Ausentes",
-            data: ausentes,
-            backgroundColor: "rgba(161, 35, 16, 0.6)",
-            borderColor: "rgba(161, 35, 16)",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: "top",
-          },
+        type: "bar",
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: "Presentes",
+                    data: presentes,
+                    backgroundColor: backgroundColors, // Cores dinâmicas
+                    borderColor: borderColors, // Bordas dinâmicas
+                    borderWidth: 1,
+                },
+                {
+                    label: "Ausentes",
+                    data: ausentes,
+                    backgroundColor: "rgba(161, 35, 16, 0.6)",
+                    borderColor: "rgba(161, 35, 16)",
+                    borderWidth: 1,
+                },
+            ],
         },
-        scales: {
-          x: {
-            beginAtZero: true,
-          },
-          y: {
-            beginAtZero: true,
-          },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: "top",
+                },
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                },
+                y: {
+                    beginAtZero: true,
+                },
+            },
+            animation: {
+                onComplete: async (chart) => {
+                    const ctx = chart.ctx;
+                    const coroaImg = await loadImage(path.join(__dirname, "assets", "coroa.png"));
+
+                    chart.data.labels.forEach((label, index) => {
+                        if (porcentagens[index] > 80) {
+                            const meta = chart.getDatasetMeta(0).data[index];
+                            const x = meta.x;
+                            const y = meta.y - 20; // Ajuste para posicionar acima da barra
+                            ctx.drawImage(coroaImg, x - 10, y, 20, 20); // Desenha a imagem da coroa
+                        }
+                    });
+                },
+            },
         },
-      },
     };
 
     // Gera o gráfico como uma imagem Base64
     return await chartJSNodeCanvas.renderToDataURL(configuration);
-  };
+};
 
   // Função para adicionar cabeçalho
   const addHeader = () => {
@@ -71,9 +103,9 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text(dados.empresa, 70, 20); 
+    doc.text(dados.empresa, 70, 20);
     doc.setFontSize(12);
-    doc.text(`Relatório de Presença - ${dados.data}`, 70, 30); 
+    doc.text(`Relatório de Presença - ${dados.data}`, 70, 30);
     doc.setFont("helvetica", "normal");
   };
 
@@ -129,7 +161,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       }
     });
 
-      // Gera o gráfico de barras
+    // Gera o gráfico de barras
     const barChartBase64 = await generateBarChart();
     doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
     addFooter();
@@ -195,7 +227,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
                 // .subtract(3, "hours")
                 .format("HH:mm")
               : "N/A",
-            presente.horarioSaida !== "N/A"  && !!presente.horarioSaida
+            presente.horarioSaida !== "N/A" && !!presente.horarioSaida
               ? moment(presente.horarioSaida, "HH:mm")
                 // .subtract(3, "hours")
                 .format("HH:mm")
@@ -204,15 +236,18 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         ],
         didParseCell: function (data) {
           if (data.section === 'head') { // Estilo do cabeçalho
-            if (data.column.dataKey === 0) {
+            if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
               data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
               data.cell.styles.textColor = [255, 255, 255]; // Branco
             }
-          } else { // Estilo das células da tabela
-            if (data.column.dataKey === 0) {
-              data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+            if (data.section === 'body') { // Aplica estilos apenas às células do corpo
+              if (data.row.index % 2 === 0) { // Linhas pares
+                  data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+              } else { // Linhas ímpares
+                  data.cell.styles.fillColor = [255, 255, 255]; // Branco
+              }
             }
-          }
+          } 
         }
       });
       y += 8 * turma.presentes.length;
@@ -220,7 +255,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     }
 
     if (turma.ausentes.length > 0) {
-      if(y > 260) {
+      if (y > 260) {
         // y -= 190 - (8 * (turma.ausentes.length - 22));
         y -= 260;
       }
@@ -240,7 +275,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
               data.cell.styles.textColor = [255, 255, 255]; // Branco
             }
           } else { // Estilo das células da tabela
-            if (data.column.dataKey === 0) {
+            if (data.column.dataKey >= 0) {
               data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
             }
           }
@@ -249,7 +284,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     }
 
     // Verifica se a posição Y ultrapassou o limite da página
-    if(turma.ausentes.length == 0) {
+    if (turma.ausentes.length == 0) {
       return y;
     }
 
@@ -270,7 +305,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   addFooter();
 
   dados.turmas.forEach((turma, index) => {
-    if(turma.ausentes.length === 0 && turma.presentes.length === 0) {
+    if (turma.ausentes.length === 0 && turma.presentes.length === 0) {
       return;
     }
     if (index > 0 || y > 260) {
