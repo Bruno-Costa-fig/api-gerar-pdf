@@ -123,13 +123,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     }
   }
 
-  // Função para adicionar rodapé
-  const addFooter = () => {
-    doc.setFontSize(10);
-    doc.text(`Página ${currentPage}`, 10, 290); // Número da página no lado esquerdo
-    doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
-  };
-
   // Adiciona a tabela de totais na primeira página
   const addTotalsTable = async () => {
     let y = 50; // Posição inicial no eixo Y
@@ -165,7 +158,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     // Gera o gráfico de barras
     const barChartBase64 = await generateBarChart();
     doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
-    addFooter();
     doc.addPage();
     currentPage++;
     addHeader();
@@ -261,7 +253,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     // Adiciona a tabela de ausentes
     if (turma.ausentes.length > 0) {
       if (y > 260) {
-        addFooter();
         doc.addPage();
         currentPage++;
         addHeader();
@@ -297,7 +288,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     if(countTurmas === dados.turmas.length) {
       return
     }
-    addFooter();
     doc.addPage();
     currentPage++;
     addHeader();
@@ -337,7 +327,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   // Gera o PDF
   addHeader();
   let y = await addTotalsTable(); // Adiciona a tabela de totais na primeira página
-  addFooter();
 
   for (const turma of dados.turmas) {
     if (turma.ausentes.length === 0 && turma.presentes.length === 0) {
@@ -345,8 +334,20 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     }
 
     y = await addTurmaDetails(turma, y);
-    addFooter();
   }
+
+  // Função para adicionar o rodapé em todas as páginas
+const addFooterToAllPages = () => {
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i); // Define a página atual
+      doc.setFontSize(10);
+      doc.text(`Página ${i} de ${totalPages}`, 10, 290); // Número da página no lado esquerdo
+      doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
+  }
+};
+
+  addFooterToAllPages();
 
   // Retorna o conteúdo do PDF como um buffer
   const pdfContent = doc.output("arraybuffer");
