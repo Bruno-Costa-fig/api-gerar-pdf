@@ -29,10 +29,10 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
     // Define as cores das barras com base na porcentagem de presença
     const backgroundColors = porcentagens.map((porcentagem) =>
-      porcentagem > 80 ? "rgba(0, 100, 0, 0.8)" : "rgba(0, 128, 0, 0.4)"
+      porcentagem = 100 ? "rgba(255, 215, 0)" : "rgba(0, 128, 0)"
     );
     const borderColors = porcentagens.map((porcentagem) =>
-      porcentagem > 80 ? "rgba(0, 100, 0)" : "rgba(0, 128, 0)"
+      porcentagem = 100 ? "rgba(255, 215, 0)" : "rgba(0, 128, 0)"
     );
 
     const configuration = {
@@ -43,14 +43,14 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
           {
             label: "Presentes",
             data: presentes,
-            backgroundColor: backgroundColors, // Cores dinâmicas
-            borderColor: borderColors, // Bordas dinâmicas
+            backgroundColor: "rgba(0, 128, 0)", // Cores dinâmicas
+            borderColor: "rgba(0, 128, 0)", // Bordas dinâmicas
             borderWidth: 1,
           },
           {
             label: "Ausentes",
             data: ausentes,
-            backgroundColor: "rgba(161, 35, 16, 0.6)",
+            backgroundColor: "rgba(161, 35, 16)",
             borderColor: "rgba(161, 35, 16)",
             borderWidth: 1,
           },
@@ -237,12 +237,18 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
             : "-",
         ]),
         didParseCell: function (data) {
-          if (data.section === "body") {
-            if (data.row.index % 2 === 0) {
-              data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
-            } else {
-              data.cell.styles.fillColor = [255, 255, 255]; // Branco
+          if (data.section === 'body') { // Aplica estilos apenas às células do corpo
+            if (data.row.index % 2 === 0) { // Linhas pares
+                data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+            } else { // Linhas ímpares
+                data.cell.styles.fillColor = [255, 255, 255]; // Branco
             }
+          }
+          if (data.section === 'head') { // Estilo do cabeçalho
+              if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
+                  data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
+                  data.cell.styles.textColor = [255, 255, 255]; // Branco
+              }
           }
         },
       });
@@ -265,6 +271,21 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         startY: y,
         head: [["Nome"]],
         body: turma.ausentes.map((ausente) => [ausente.nome]),
+        didParseCell: function (data) {
+          if (data.section === 'body') { // Aplica estilos apenas às células do corpo
+              if (data.row.index % 2 === 0) { // Linhas pares
+                  data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
+              } else { // Linhas ímpares
+                  data.cell.styles.fillColor = [255, 255, 255]; // Branco
+              }
+          }
+          if (data.section === 'head') { // Estilo do cabeçalho
+              if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
+                  data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
+                  data.cell.styles.textColor = [255, 255, 255]; // Branco
+              }
+          }
+      },
       });
       y = doc.lastAutoTable.finalY + 10;
     }
