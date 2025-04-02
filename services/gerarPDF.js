@@ -42,14 +42,14 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         labels,
         datasets: [
           {
-            label: "Presentes",
+            label: "Alunos Presentes",
             data: presentes,
             backgroundColor: "rgba(0, 128, 0)", // Cores dinâmicas
             borderColor: "rgba(0, 128, 0)", // Bordas dinâmicas
             borderWidth: 1,
           },
           {
-            label: "Ausentes",
+            label: "Alunos Ausentes",
             data: ausentes,
             backgroundColor: "rgba(161, 35, 16)",
             borderColor: "rgba(161, 35, 16)",
@@ -301,7 +301,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     const configuration = {
       type: "pie",
       data: {
-        labels: ["Presentes", "Ausentes"],
+        labels: ["Alunos Presentes", "Alunos Ausentes"],
         datasets: [
           {
             data: [turma.totalPresentes, turma.totalAusentes],
