@@ -200,7 +200,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
     // Atualiza o valor de `y` após a tabela
     y = doc.lastAutoTable.finalY + 10;
-
+    y -= 5; // Ajusta a posição Y para o gráfico de pizza
     // Gera o gráfico de pizza para a turma
     const pieChartBase64 = await generatePieChart(turma);
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -298,31 +298,49 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const generatePieChart = async (turma) => {
     const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 400, height: 400 });
 
+    // Calcula o total de alunos
+    const totalAlunos = turma.totalPresentes + turma.totalAusentes;
+
+    // Calcula as porcentagens
+    const porcentagemPresentes = ((turma.totalPresentes / totalAlunos) * 100).toFixed(1);
+    const porcentagemAusentes = ((turma.totalAusentes / totalAlunos) * 100).toFixed(1);
+
+    // Atualiza os rótulos com as porcentagens
+    const labels = [
+        `Alunos Presentes - ${porcentagemPresentes}%`,
+        `Alunos Ausentes - ${porcentagemAusentes}%`,
+    ];
+
     const configuration = {
-      type: "pie",
-      data: {
-        labels: ["Alunos Presentes", "Alunos Ausentes"],
-        datasets: [
-          {
-            data: [turma.totalPresentes, turma.totalAusentes],
-            backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: "top",
-          },
+        type: "pie",
+        data: {
+            labels, // Usa os rótulos atualizados
+            datasets: [
+                {
+                    data: [turma.totalPresentes, turma.totalAusentes],
+                    backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
+                    borderWidth: 0,
+                },
+            ],
         },
-      },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: "top",
+                    labels: {
+                      font: {
+                        size: 20
+                      }
+                    }
+                },
+            },
+        },
     };
 
     // Gera o gráfico como uma imagem Base64
     return await chartJSNodeCanvas.renderToDataURL(configuration);
-  };
+};
 
   // Gera o PDF
   addHeader();
