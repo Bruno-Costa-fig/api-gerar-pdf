@@ -9,6 +9,7 @@ const path = require("path");
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
+  let countTurmas = 0;
 
   // Configuração do ChartJSNodeCanvas
   const width = 800; // Largura do gráfico
@@ -173,7 +174,8 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   // Adiciona os detalhes de cada turma
-  const addTurmaDetails = async (turma, y) => {
+  const addTurmaDetails = async (turma, y, last) => {
+    countTurmas++;
     doc.setFontSize(16);
     centralizarTexto(`Turma: ${turma.turma}`, y, true);
     y += 10;
@@ -290,11 +292,15 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       y = doc.lastAutoTable.finalY + 10;
     }
 
-      console.log("y", y);
-      doc.addPage();
-      currentPage++;
-      addHeader();
-      y = 50;
+
+    if(countTurmas === dados.turmas.length) {
+      return
+    }
+    addFooter();
+    doc.addPage();
+    currentPage++;
+    addHeader();
+    y = 50;
     return y;
   };
 
@@ -336,12 +342,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   for (const turma of dados.turmas) {
     if (turma.ausentes.length === 0 && turma.presentes.length === 0) {
       return;
-    }
-    if (turma.length > 0 || y > 260) {
-      doc.addPage();
-      currentPage++;
-      addHeader();
-      y = 50;
     }
 
     y = await addTurmaDetails(turma, y);
