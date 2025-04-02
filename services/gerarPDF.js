@@ -26,15 +26,15 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
           {
             label: "Presentes",
             data: presentes,
-            backgroundColor: "rgba(75, 192, 192, 0.6)",
-            borderColor: "rgba(75, 192, 192, 1)",
+            backgroundColor: "rgba(0, 128, 0, 0.6)",
+            borderColor: "rgba(0, 128, 0)",
             borderWidth: 1,
           },
           {
             label: "Ausentes",
             data: ausentes,
-            backgroundColor: "rgba(255, 99, 132, 0.6)",
-            borderColor: "rgba(255, 99, 132, 1)",
+            backgroundColor: "rgba(161, 35, 16, 0.6)",
+            borderColor: "rgba(161, 35, 16)",
             borderWidth: 1,
           },
         ],
@@ -108,6 +108,25 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       startY: y,
       head: [["Total Presentes", "Total Ausentes"]],
       body: [[dados.totalPresentes, dados.totalAusentes]],
+      didParseCell: function (data) {
+        if (data.section === 'head') { // Estilo do cabeçalho
+          if (data.column.dataKey === 0) {
+            data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
+            data.cell.styles.textColor = [255, 255, 255]; // Branco
+          }
+          if (data.column.dataKey === 1) {
+            data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
+            data.cell.styles.textColor = [255, 255, 255]; // Branco
+          }
+        } else { // Estilo das células da tabela
+          if (data.column.dataKey === 0) {
+            data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+          }
+          if (data.column.dataKey === 1) {
+            data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
+          }
+        }
+      }
     });
 
       // Gera o gráfico de barras
@@ -133,6 +152,25 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       body: [
         [turma.totalPresentes, turma.totalAusentes]
       ],
+      didParseCell: function (data) {
+        if (data.section === 'head') { // Estilo do cabeçalho
+          if (data.column.dataKey === 0) {
+            data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
+            data.cell.styles.textColor = [255, 255, 255]; // Branco
+          }
+          if (data.column.dataKey === 1) {
+            data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
+            data.cell.styles.textColor = [255, 255, 255]; // Branco
+          }
+        } else { // Estilo das células da tabela
+          if (data.column.dataKey === 0) {
+            data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+          }
+          if (data.column.dataKey === 1) {
+            data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
+          }
+        }
+      }
     });
 
     y += 30;
@@ -164,19 +202,22 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
               : "-",
           ]),
         ],
+        didParseCell: function (data) {
+          if (data.section === 'head') { // Estilo do cabeçalho
+            if (data.column.dataKey === 0) {
+              data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
+              data.cell.styles.textColor = [255, 255, 255]; // Branco
+            }
+          } else { // Estilo das células da tabela
+            if (data.column.dataKey === 0) {
+              data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+            }
+          }
+        }
       });
       y += 8 * turma.presentes.length;
       y += 10;
     }
-
-      // // Verifica se a posição Y ultrapassou o limite da página
-      // if (y > 260) {
-      //   addFooter();
-      //   doc.addPage();
-      //   currentPage++;
-      //   addHeader();
-      //   y = 50;
-      // }
 
     if (turma.ausentes.length > 0) {
       if(y > 260) {
@@ -192,6 +233,18 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         body: [
           ...turma.ausentes.map((ausente) => [ausente.nome]),
         ],
+        didParseCell: function (data) {
+          if (data.section === 'head') { // Estilo do cabeçalho
+            if (data.column.dataKey === 0) {
+              data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
+              data.cell.styles.textColor = [255, 255, 255]; // Branco
+            }
+          } else { // Estilo das células da tabela
+            if (data.column.dataKey === 0) {
+              data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
+            }
+          }
+        }
       });
     }
 
