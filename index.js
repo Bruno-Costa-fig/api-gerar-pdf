@@ -114,6 +114,38 @@ app.post('/gerar-carteirinhas', async (req, res) => {
   }
 });
 
+app.post('/relatorio-turma-detalhado', async (req, res) => {
+  const alunos = [
+    {
+      nome: 'João Silva',
+      presencas: ['2025-04-01', '2025-04-02', '2025-04-03']
+    },
+    {
+      nome: 'Maria Souza',
+      presencas: ['2025-04-01', '2025-04-04']
+    }
+  ];
+
+  try {
+  const { gerarRelatorio } = require('./services/relatorioTurmaDetalhado');
+  
+  const pdfBuffer = await gerarRelatorio(alunos);
+
+    // Define o nome do arquivo
+    const fileName = 'relatorio.pdf';
+
+    // Define os cabeçalhos para download do arquivo
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    // Envia o arquivo PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Erro ao gerar o PDF:', error);
+    res.status(500).send('Erro ao gerar o PDF');
+  }
+})
+
 app.listen(port, () => {
   console.log(`App listening at http://localhost:${port}`);
 });
