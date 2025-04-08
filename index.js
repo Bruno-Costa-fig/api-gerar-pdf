@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 
 app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
-   let logoEscolaBase64 = logoPresencaBase64; // Logo padrão
+  let logoEscolaBase64 = logoPresencaBase64; // Logo padrão
   try {
     // Verifica se os dados foram enviados
     const dados = req.body;
@@ -36,7 +36,7 @@ app.post('/gerarPDF', async (req, res) => {
       totalAusentes: dados.TotalAusentes,
     }
 
-    if(dadosTotais.organizationId == 1){
+    if (dadosTotais.organizationId == 1) {
       logoEscolaBase64 = logoEdsonBase64;
     }
 
@@ -74,8 +74,8 @@ app.post('/gerarPDF', async (req, res) => {
 });
 
 app.post('/gerar-carteirinhas', async (req, res) => {
-  const {gerarPdfCarteirinhas} = require('./services/geradorCarteirinha');
-  const {gerarPdfCarteirinhasModelo2} = require('./services/geradorCarteirinhaModelo2');
+  const { gerarPdfCarteirinhas } = require('./services/geradorCarteirinha');
+  const { gerarPdfCarteirinhasModelo2 } = require('./services/geradorCarteirinhaModelo2');
   try {
     const dados = req.body;
 
@@ -93,7 +93,7 @@ app.post('/gerar-carteirinhas', async (req, res) => {
     // Gera o PDF com as carteirinhas
     let pdfBuffer;
 
-    if(!!req.query.modelo && req.query.modelo == 2){
+    if (!!req.query.modelo && req.query.modelo == 2) {
       pdfBuffer = await gerarPdfCarteirinhasModelo2(alunos, nomeEscola);
     } else {
       pdfBuffer = await gerarPdfCarteirinhas(alunos, nomeEscola);
@@ -115,6 +115,7 @@ app.post('/gerar-carteirinhas', async (req, res) => {
 });
 
 app.post('/relatorio-turma-detalhado', async (req, res) => {
+  let logoEscolaBase64 = logoPresencaBase64;
   const alunos = [
     {
       nome: 'João Silva',
@@ -127,9 +128,9 @@ app.post('/relatorio-turma-detalhado', async (req, res) => {
   ];
 
   try {
-  const { gerarRelatorio } = require('./services/relatorioTurmaDetalhado');
-  
-  const pdfBuffer = await gerarRelatorio(alunos);
+    const { gerarRelatorio } = require('./services/relatorioTurmaDetalhado');
+
+    const pdfBuffer = await gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64);
 
     // Define o nome do arquivo
     const fileName = 'relatorio.pdf';
@@ -137,7 +138,10 @@ app.post('/relatorio-turma-detalhado', async (req, res) => {
     // Define os cabeçalhos para download do arquivo
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
+    // Salva o arquivo PDF localmente
+    const filePath = path.join(__dirname, 'downloads', 'relatorio.pdf');
+    fs.writeFileSync(filePath, pdfBuffer);
+    console.log(`PDF salvo em: ${filePath}`);
     // Envia o arquivo PDF
     res.send(pdfBuffer);
   } catch (error) {
