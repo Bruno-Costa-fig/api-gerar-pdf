@@ -30,7 +30,7 @@ function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
         doc.setFontSize(16);
         doc.text("EEMTI EDSON LUIZ CAVALCANTE DE GOUVEIA", 70, 20);
         doc.setFontSize(12);
-        doc.text(`Relatório detalhado por turma - ${moment().format("MM/YYYY")}`, 70, 30);
+        doc.text(`Relatório detalhado por turma - mês ${moment().format("MM/YYYY")}`, 70, 30);
         doc.setFont("helvetica", "normal");
         y += 40
     };
@@ -83,7 +83,7 @@ function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
         head: [head],
         body: body.map(linha => linha.map(cel => (typeof cel === 'object' ? '' : cel))),
         styles: {
-            fontSize: 4, // Reduce font size to fit more content
+            fontSize: 6, // Reduce font size to fit more content
             halign: 'center',
             valign: 'middle',
             cellWidth: 'wrap', // Allow cells to wrap content
@@ -148,12 +148,17 @@ function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
 function getDiasDoMes(ano, mes) {
     const dias = [];
     const data = new Date(ano, mes, 1);
+    const hoje = new Date();
+
     while (data.getMonth() === mes) {
-        dias.push({
-            dia: data.getDate(),
-            data: data.toISOString().split('T')[0],
-            dateObj: new Date(data),
-        });
+        const isMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
+        if (!isMesAtual || data <= hoje) {
+            dias.push({
+                dia: data.getDate(),
+                data: data.toISOString().split('T')[0],
+                dateObj: new Date(data),
+            });
+        }
         data.setDate(data.getDate() + 1);
     }
     return dias;

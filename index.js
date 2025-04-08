@@ -119,7 +119,7 @@ app.post('/relatorio-turma-detalhado', async (req, res) => {
   const alunos = [
     {
       nome: 'João Silva',
-      presencas: ['2025-04-01', '2025-04-02', '2025-04-03']
+      presencas: ['2025-04-01', '2025-04-02', '2025-04-03', '2025-04-04'], 
     },
     {
       nome: 'Maria Souza',
