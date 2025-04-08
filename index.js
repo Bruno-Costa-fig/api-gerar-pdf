@@ -47,6 +47,7 @@ app.post('/gerarPDF', async (req, res) => {
       presentes: turma.Presentes.map((presente) => ({
         nome: presente.Nome,
         horarioEntrada: presente.HorarioEntrada,
+        horarioSaida: presente.HorarioSaida,
       })),
       ausentes: turma.Ausentes.map((ausente) => ({
         nome: ausente.Nome,
