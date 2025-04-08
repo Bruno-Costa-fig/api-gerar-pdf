@@ -24,10 +24,36 @@ function gerarRelatorio(alunos) {
             linha.push({
                 presenca: Array.isArray(aluno.presencas) && aluno.presencas.includes(dia.data),
                 isFimDeSemana: isFinalDeSemana(dia.dateObj),
-              });              
+            });
         });
         return linha;
     });
+
+    // Legenda no topo
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text('Legenda:', 40, 30);
+
+    // Bolinha verde - Presente
+    doc.setFillColor(0, 200, 0);
+    doc.circle(80, 26, 4, 'F');
+    doc.setTextColor(0);
+    doc.text('Presente', 90, 30);
+
+    // Bolinha vermelha - Ausente
+    doc.setFillColor(220, 0, 0);
+    doc.circle(160, 26, 4, 'F');
+    doc.setTextColor(0);
+    doc.text('Ausente', 170, 30);
+
+    // Traço - Fim de semana
+    doc.setTextColor(100);
+    doc.setFontSize(12);
+    doc.text('-', 240, 30);
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text('Fim de semana', 250, 30);
+
 
     // Gerar tabela
     autoTable(doc, {
@@ -52,28 +78,30 @@ function gerarRelatorio(alunos) {
             const colIndex = data.column.index;
             const rowIndex = data.row.index;
         
-            if (colIndex === 0) return; // Skip the first column (name)
+            if (data.section === 'head') return; // ← Isso impede de desenhar no cabeçalho
+            if (colIndex === 0) return; // pula coluna do nome
         
             const celInfo = body[rowIndex]?.[colIndex];
-            if (!celInfo || typeof celInfo !== 'object') return; // Skip invalid cells
+            if (!celInfo || typeof celInfo !== 'object') return;
         
             const { x, y, height, width } = data.cell;
             const centerX = x + width / 2;
             const centerY = y + height / 2;
             const radius = 2.5;
-
-            const isPresente = celInfo?.presenca === true;
         
             if (celInfo.isFimDeSemana) {
-                // Highlight weekends
                 doc.setFillColor(230);
                 doc.rect(x, y, width, height, 'F');
+                doc.setTextColor(100);
+                doc.setFontSize(6);
+                doc.text('-', centerX, centerY + 2, { align: 'center', baseline: 'middle' });
+            } else {
+                const isPresente = celInfo.presenca === true;
+                doc.setFillColor(isPresente ? 0 : 220, isPresente ? 200 : 0, isPresente ? 0 : 0);
+                doc.circle(centerX, centerY, radius, 'F');
             }
-        
-            // Draw presence/absence circle
-            doc.setFillColor(isPresente ? 0 : 220, isPresente ? 200 : 0, isPresente ? 0 : 0);
-            doc.circle(centerX, centerY, radius, 'F');
-        },
+        }        
+
     });
 
     // Salvar PDF
