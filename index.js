@@ -1,13 +1,13 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { gerarImagemPrimeiroAcesso } = require('./services/gerarImagemPrimeiroAcesso');
 const app = express();
 const port = 3003;
 
 app.use(express.json({ limit: "50mb" }));
 
 // Lê os arquivos Base64 das logos
-const logoEdsonBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'edson.txt'), 'utf-8');
 const logoPresencaBase64 = fs.readFileSync(path.join(__dirname, 'logosbase64', 'presencamais.txt'), 'utf-8');
 
 app.get('/', (req, res) => {
@@ -16,16 +16,16 @@ app.get('/', (req, res) => {
 
 app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
-  let logoEscolaBase64 = logoPresencaBase64; // Logo padrão
   try {
     // Verifica se os dados foram enviados
     const dados = req.body;
-
+    
     if (!dados) {
       res.status(400).send('Dados inválidos ou não informados');
       return;
     }
 
+    let logoEscolaBase64 = dados.LogoEscolaBase64 ?? logoPresencaBase64; // Logo padrão
     // Converte as propriedades do JSON para letras minúsculas
     const dadosTotais = {
       empresa: dados.Empresa,
@@ -34,10 +34,6 @@ app.post('/gerarPDF', async (req, res) => {
       totalPresentes: dados.TotalPresentes,
       data: dados.Data,
       totalAusentes: dados.TotalAusentes,
-    }
-
-    if (dadosTotais.organizationId == 1) {
-      logoEscolaBase64 = logoEdsonBase64;
     }
 
     dadosTotais.turmas = dados.Turmas.map((turma) => ({
@@ -150,6 +146,20 @@ app.post('/relatorio-turma-detalhado', async (req, res) => {
   }
 })
 
+app.post('/gerar-imagem-primeiro-acesso', async (req, res) => {
+  try {
+    const { nome, link, qrCodeBase64 } = req.body;
+
+    if (!nome || !link || !qrCodeBase64) {
+      return res.status(400).json({ error: 'Os campos nome, link e qrCodeBase64 são obrigatórios.' });
+    }
+
+    res.json(await gerarImagemPrimeiroAcesso(nome, link, qrCodeBase64));
+  } catch (error) {
+    console.error('Erro ao gerar a imagem:', error);
+    res.status(500).json({ error: 'Erro ao gerar a imagem.' });
+  }
+});
 app.listen(port, () => {
   console.log(`App listening at http://localhost:${port}`);
 });
