@@ -160,6 +160,27 @@ app.post('/gerar-imagem-primeiro-acesso', async (req, res) => {
     res.status(500).json({ error: 'Erro ao gerar a imagem.' });
   }
 });
+
+app.post('/relatorio-alunos-faltosos', async (req, res) => {
+  try {
+    const { gerarRelatorioAlunosFaltosos } = require('./services/relatorioAlunosFaltosos');
+    const dados = req.body;
+
+    if (!dados || !dados.alunos) {
+      return res.status(400).json({ error: 'Dados inválidos ou não informados' });
+    }
+
+    const pdfBuffer = await gerarRelatorioAlunosFaltosos(dados, logoPresencaBase64);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="relatorio-alunos-faltosos.pdf"');
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Erro ao gerar o relatório:', error);
+    res.status(500).send('Erro ao gerar o relatório');
+  }
+});
+
 app.listen(port, () => {
   console.log(`App listening at http://localhost:${port}`);
 });
