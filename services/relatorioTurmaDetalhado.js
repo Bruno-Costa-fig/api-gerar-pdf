@@ -15,7 +15,7 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
         format: "a4",
     });
     let y = 0;
-    const diasDoMes = getDiasDoMes(ano, parseInt(mes.split('-')[1], 10) - 1); // abril (mês 3 = abril)
+    const diasDoMes = getDiasDoMes(ano, mes - 1); // abril (mês 3 = abril)
 
     // Cabeçalho
     const head = ['Aluno', ...diasDoMes.map(d => d.dia.toString())];
@@ -32,7 +32,7 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
         doc.setFontSize(16);
         doc.text(escola || "Nome da Escola", 70, 20);
         doc.setFontSize(12);
-        doc.text(`Relatório detalhado por turma - mês ${mes ? mes + '/' + ano : moment().format("MM/YYYY")}`, 70, 30);
+        doc.text(`Relatório detalhado por turma -  ${turmas[0].turma} - ${mes + '/' + ano}`, 70, 40);
         doc.setFont("helvetica", "normal");
         y += 40
     };
@@ -49,10 +49,15 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
         (turma.alunos || []).forEach(aluno => {
             const linha = [aluno.nome];
             diasDoMes.forEach(dia => {
-                linha.push({
+                // Salva o info da célula em uma variável auxiliar
+                const celInfo = {
                     presenca: Array.isArray(aluno.presencas) && aluno.presencas.includes(dia.data),
                     isFimDeSemana: isFinalDeSemana(dia.dateObj),
-                });
+                };
+                linha.push(''); // Adiciona célula vazia para não aparecer [object Object]
+                // Salva info extra em uma estrutura paralela (opcional, se quiser acessar depois)
+                if (!aluno._celInfos) aluno._celInfos = [];
+                aluno._celInfos.push(celInfo);
             });
             body.push(linha);
         });
@@ -67,23 +72,15 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
 
     // Bolinha verde - Presente
     doc.setFillColor(0, 200, 0);
-    doc.circle(80, y - 2, 4, 'F');
+    doc.circle(100, y - 2, 4, 'F');
     doc.setTextColor(0);
-    doc.text('Presente', 90, y);
+    doc.text('Presente', 108, y);
 
     // Bolinha vermelha - Ausente
     doc.setFillColor(220, 0, 0);
-    doc.circle(160, y - 2, 4, 'F');
+    doc.circle(180, y - 2, 4, 'F');
     doc.setTextColor(0);
-    doc.text('Ausente', 170, y);
-
-    // Traço - Fim de semana
-    doc.setTextColor(100);
-    doc.setFontSize(12);
-    doc.text('-', 240, y);
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text('Fim de semana', 250, y);
+    doc.text('Ausente', 188, y);
 
     y += 10; // Espaço para a legenda
 
@@ -119,7 +116,8 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
             if (data.section === 'head') return;
             if (colIndex === 0) return;
 
-            const celInfo = body[rowIndex]?.[colIndex];
+            const alunoIndex = body.slice(0, rowIndex + 1).filter(l => Array.isArray(l) && l.length > 1).length - 1;
+            const celInfo = turmas.flatMap(t => t.alunos || [])[alunoIndex]?._celInfos?.[colIndex - 1];
             if (!celInfo || typeof celInfo !== 'object') return;
 
             const { x, y, height, width } = data.cell;
@@ -150,11 +148,22 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
 
     const addFooterToAllPages = () => {
         const totalPages = doc.getNumberOfPages();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i); // Define a página atual
+            doc.setPage(i);
             doc.setFontSize(10);
-            doc.text(`Página ${i} de ${totalPages}`, 10, 435); // Número da página no lado esquerdo
-            doc.addImage(logoPresencaBase64, "PNG", 580, 420, 40, 15); // Logo do Presença no lado direito
+            // Número da página no lado esquerdo
+            doc.text(`Página ${i} de ${totalPages}`, 10, pageHeight - 20);
+            // Logo do Presença no lado direito
+            doc.addImage(
+                logoPresencaBase64,
+                "PNG",
+                pageWidth - 50, // 40 de largura + 10 de margem
+                pageHeight - 35, // 15 de altura + 20 de margem
+                40,
+                15
+            );
         }
     };
 
