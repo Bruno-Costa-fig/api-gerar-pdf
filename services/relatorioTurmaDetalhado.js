@@ -7,45 +7,55 @@ moment.locale('pt-br');
 
 
 
-function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
+function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
+    const { escola, logoBase64, mes, ano, turmas, observacao, alunos } = dados;
     const doc = new jsPDF({
         orientation: "landscape",
-        unit: "px",
+        unit: "pt",
         format: "a4",
     });
     let y = 0;
-    const diasDoMes = getDiasDoMes(2025, 3); // abril (mês 3 = abril)
+    const diasDoMes = getDiasDoMes(ano, parseInt(mes.split('-')[1], 10) - 1); // abril (mês 3 = abril)
 
     // Cabeçalho
     const head = ['Aluno', ...diasDoMes.map(d => d.dia.toString())];
 
     const addHeader = () => {
-        const imgProps = doc.getImageProperties(logoEscolaBase64);
+        const imgProps = doc.getImageProperties(logoBase64);
         const aspectRatio = imgProps.width / imgProps.height;
-        const maxDimension = 40; // Define um tamanho máximo para largura ou altura
+        const maxDimension = 35; // Define um tamanho máximo para largura ou altura
         const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
         const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
-        doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
+        const logoBase64Clean = logoBase64.startsWith('data:image') ? logoBase64.split(',')[1] : logoBase64;
+        doc.addImage(logoBase64Clean, "PNG", 15, 5, imgWidth, imgHeight);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
-        doc.text("EEMTI EDSON LUIZ CAVALCANTE DE GOUVEIA", 70, 20);
+        doc.text(escola || "Nome da Escola", 70, 20);
         doc.setFontSize(12);
-        doc.text(`Relatório detalhado por turma - mês ${moment().format("MM/YYYY")}`, 70, 30);
+        doc.text(`Relatório detalhado por turma - mês ${mes ? mes + '/' + ano : moment().format("MM/YYYY")}`, 70, 30);
         doc.setFont("helvetica", "normal");
         y += 40
     };
 
     addHeader();
     // Corpo
-    const body = alunos.map(aluno => {
-        const linha = [aluno.nome];
-        diasDoMes.forEach(dia => {
-            linha.push({
-                presenca: Array.isArray(aluno.presencas) && aluno.presencas.includes(dia.data),
-                isFimDeSemana: isFinalDeSemana(dia.dateObj),
+    // Agora percorre cada turma e monta o body para cada uma
+    let body = [];
+    turmas.forEach(turma => {
+        // Adiciona uma linha de título da turma (opcional)
+        body.push([
+            { content: `Turma: ${turma.turma || turma.nome || turma.id || 'Sem nome'}`, colSpan: diasDoMes.length + 1, styles: { halign: 'left', fontStyle: 'bold', fillColor: [220, 220, 220] } }
+        ]);
+        (turma.alunos || []).forEach(aluno => {
+            const linha = [aluno.nome];
+            diasDoMes.forEach(dia => {
+                linha.push({
+                    presenca: Array.isArray(aluno.presencas) && aluno.presencas.includes(dia.data),
+                    isFimDeSemana: isFinalDeSemana(dia.dateObj),
+                });
             });
+            body.push(linha);
         });
-        return linha;
     });
 
     y += 10; // Espaço para o cabeçalho da tabela
@@ -81,28 +91,33 @@ function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
     autoTable(doc, {
         startY: y,
         head: [head],
-        body: body.map(linha => linha.map(cel => (typeof cel === 'object' ? '' : cel))),
+        body: body,
         styles: {
-            fontSize: 6, // Reduce font size to fit more content
+            fontSize: 6,
             halign: 'center',
             valign: 'middle',
-            cellWidth: 'wrap', // Allow cells to wrap content
+            cellWidth: 'wrap',
         },
         headStyles: {
             fillColor: [100, 100, 100],
             textColor: 255,
         },
         columnStyles: {
-            0: { halign: 'left', cellWidth: 50 }, // Increase width for the first column
-            // Dynamically adjust other columns
-            '*': { cellWidth: 'auto' },
+            0: { halign: 'left', cellWidth: 60 },
+            '*': { cellWidth: 16 },
+        },
+        styles: {
+            fontSize: 6,
+            halign: 'center',
+            valign: 'middle',
+            cellPadding: 1,
         },
         didDrawCell: function (data) {
             const colIndex = data.column.index;
             const rowIndex = data.row.index;
 
-            if (data.section === 'head') return; // ← Isso impede de desenhar no cabeçalho
-            if (colIndex === 0) return; // pula coluna do nome
+            if (data.section === 'head') return;
+            if (colIndex === 0) return;
 
             const celInfo = body[rowIndex]?.[colIndex];
             if (!celInfo || typeof celInfo !== 'object') return;
@@ -124,8 +139,14 @@ function gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64) {
                 doc.circle(centerX, centerY, radius, 'F');
             }
         }
-
     });
+
+    // Ao final, antes de retornar o PDF, adicionar a observação se existir:
+    if (observacao) {
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.text(`Observação: ${observacao}`, 40, doc.internal.pageSize.getHeight() - 40);
+    }
 
     const addFooterToAllPages = () => {
         const totalPages = doc.getNumberOfPages();
@@ -169,4 +190,4 @@ function isFinalDeSemana(date) {
     return diaSemana === 0 || diaSemana === 6;
 }
 
-module.exports = { gerarRelatorio };
+module.exports = { relatorioTurmaDetalhado };

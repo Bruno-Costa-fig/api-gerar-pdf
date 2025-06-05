@@ -111,22 +111,16 @@ app.post('/gerar-carteirinhas', async (req, res) => {
 });
 
 app.post('/relatorio-turma-detalhado', async (req, res) => {
-  let logoEscolaBase64 = logoPresencaBase64;
-  const alunos = [
-    {
-      nome: 'João Silva',
-      presencas: ['2025-04-01', '2025-04-02', '2025-04-03', '2025-04-04'], 
-    },
-    {
-      nome: 'Maria Souza',
-      presencas: ['2025-04-01', '2025-04-04']
-    }
-  ];
-
   try {
-    const { gerarRelatorio } = require('./services/relatorioTurmaDetalhado');
+    const { relatorioTurmaDetalhado } = require('./services/relatorioTurmaDetalhado');
+    const dados = req.body;
 
-    const pdfBuffer = await gerarRelatorio(alunos, logoEscolaBase64, logoPresencaBase64);
+    if (!dados || !dados.escola || !dados.logoBase64 || !dados.mes) {
+      return res.status(400).json({ error: 'Dados inválidos ou não informados' });
+    }
+
+    // Passa o objeto completo e a logo do Presença+
+    const pdfBuffer = await relatorioTurmaDetalhado(dados, logoPresencaBase64);
 
     // Define o nome do arquivo
     const fileName = 'relatorio.pdf';
@@ -134,17 +128,19 @@ app.post('/relatorio-turma-detalhado', async (req, res) => {
     // Define os cabeçalhos para download do arquivo
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    // Salva o arquivo PDF localmente
+
+    // Salva o arquivo PDF localmente (opcional)
     const filePath = path.join(__dirname, 'downloads', 'relatorio.pdf');
     fs.writeFileSync(filePath, pdfBuffer);
     console.log(`PDF salvo em: ${filePath}`);
+
     // Envia o arquivo PDF
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar o PDF:', error);
     res.status(500).send('Erro ao gerar o PDF');
   }
-})
+});
 
 app.post('/gerar-imagem-primeiro-acesso', async (req, res) => {
   try {
