@@ -20,7 +20,7 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
     // Cabeçalho
     const head = ['Aluno', ...diasDoMes.map(d => d.dia.toString())];
 
-    const addHeader = () => {
+    const addHeader = (nomeTurma) => {
         const imgProps = doc.getImageProperties(logoBase64);
         const aspectRatio = imgProps.width / imgProps.height;
         const maxDimension = 35; // Define um tamanho máximo para largura ou altura
@@ -32,119 +32,115 @@ function relatorioTurmaDetalhado(dados, logoPresencaBase64) {
         doc.setFontSize(16);
         doc.text(escola || "Nome da Escola", 70, 20);
         doc.setFontSize(12);
-        doc.text(`Relatório detalhado por turma -  ${turmas[0].turma} - ${mes + '/' + ano}`, 70, 40);
+        doc.text(`Relatório detalhado por turma -  ${nomeTurma ?? turmas[0].turma} - ${mes + '/' + ano}`, 70, 35);
         doc.setFont("helvetica", "normal");
         y += 40
     };
 
     addHeader();
-    // Corpo
-    // Agora percorre cada turma e monta o body para cada uma
-    let body = [];
-    turmas.forEach(turma => {
-        // Adiciona uma linha de título da turma (opcional)
+    turmas.forEach((turma, turmaIdx) => {
+        if (turmaIdx > 0) {
+            doc.addPage();
+            y = 0;
+            addHeader(turma.turma || turma.nome || turma.id);
+        }
+
+        // Monta o body da tabela para a turma atual
+        let body = [];
         body.push([
             { content: `Turma: ${turma.turma || turma.nome || turma.id || 'Sem nome'}`, colSpan: diasDoMes.length + 1, styles: { halign: 'left', fontStyle: 'bold', fillColor: [220, 220, 220] } }
         ]);
         (turma.alunos || []).forEach(aluno => {
             const linha = [aluno.nome];
             diasDoMes.forEach(dia => {
-                // Salva o info da célula em uma variável auxiliar
                 const celInfo = {
                     presenca: Array.isArray(aluno.presencas) && aluno.presencas.includes(dia.data),
                     isFimDeSemana: isFinalDeSemana(dia.dateObj),
                 };
-                linha.push(''); // Adiciona célula vazia para não aparecer [object Object]
-                // Salva info extra em uma estrutura paralela (opcional, se quiser acessar depois)
+                linha.push('');
                 if (!aluno._celInfos) aluno._celInfos = [];
                 aluno._celInfos.push(celInfo);
             });
             body.push(linha);
         });
-    });
 
-    y += 10; // Espaço para o cabeçalho da tabela
+        y += 10;
 
-    // Legenda no topo
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text('Legenda:', 40, y);
-
-    // Bolinha verde - Presente
-    doc.setFillColor(0, 200, 0);
-    doc.circle(100, y - 2, 4, 'F');
-    doc.setTextColor(0);
-    doc.text('Presente', 108, y);
-
-    // Bolinha vermelha - Ausente
-    doc.setFillColor(220, 0, 0);
-    doc.circle(180, y - 2, 4, 'F');
-    doc.setTextColor(0);
-    doc.text('Ausente', 188, y);
-
-    y += 10; // Espaço para a legenda
-
-    // Gerar tabela
-    autoTable(doc, {
-        startY: y,
-        head: [head],
-        body: body,
-        styles: {
-            fontSize: 6,
-            halign: 'center',
-            valign: 'middle',
-            cellWidth: 'wrap',
-        },
-        headStyles: {
-            fillColor: [100, 100, 100],
-            textColor: 255,
-        },
-        columnStyles: {
-            0: { halign: 'left', cellWidth: 60 },
-            '*': { cellWidth: 16 },
-        },
-        styles: {
-            fontSize: 6,
-            halign: 'center',
-            valign: 'middle',
-            cellPadding: 1,
-        },
-        didDrawCell: function (data) {
-            const colIndex = data.column.index;
-            const rowIndex = data.row.index;
-
-            if (data.section === 'head') return;
-            if (colIndex === 0) return;
-
-            const alunoIndex = body.slice(0, rowIndex + 1).filter(l => Array.isArray(l) && l.length > 1).length - 1;
-            const celInfo = turmas.flatMap(t => t.alunos || [])[alunoIndex]?._celInfos?.[colIndex - 1];
-            if (!celInfo || typeof celInfo !== 'object') return;
-
-            const { x, y, height, width } = data.cell;
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
-            const radius = 2.5;
-
-            if (celInfo.isFimDeSemana) {
-                doc.setFillColor(230);
-                doc.rect(x, y, width, height, 'F');
-                doc.setTextColor(100);
-                doc.setFontSize(6);
-                doc.text('-', centerX, centerY + 2, { align: 'center', baseline: 'middle' });
-            } else {
-                const isPresente = celInfo.presenca === true;
-                doc.setFillColor(isPresente ? 0 : 220, isPresente ? 200 : 0, isPresente ? 0 : 0);
-                doc.circle(centerX, centerY, radius, 'F');
-            }
-        }
-    });
-
-    // Ao final, antes de retornar o PDF, adicionar a observação se existir:
-    if (observacao) {
+        // Legenda no topo
         doc.setFontSize(10);
-        doc.setTextColor(80);
-        doc.text(`Observação: ${observacao}`, 40, doc.internal.pageSize.getHeight() - 40);
-    }
+        doc.setTextColor(0);
+        doc.text('Legenda:', 40, y);
+
+        doc.setFillColor(0, 200, 0);
+        doc.circle(100, y - 2, 4, 'F');
+        doc.setTextColor(0);
+        doc.text('Presente', 108, y);
+
+        doc.setFillColor(220, 0, 0);
+        doc.circle(180, y - 2, 4, 'F');
+        doc.setTextColor(0);
+        doc.text('Ausente', 188, y);
+
+        y += 10;
+
+        autoTable(doc, {
+            startY: y,
+            head: [head],
+            body: body,
+            styles: {
+                fontSize: 6,
+                halign: 'center',
+                valign: 'middle',
+                cellWidth: 'wrap',
+            },
+            headStyles: {
+                fillColor: [100, 100, 100],
+                textColor: 255,
+            },
+            columnStyles: {
+                0: { halign: 'left', cellWidth: 60 },
+                '*': { cellWidth: 16 },
+            },
+            styles: {
+                fontSize: 6,
+                halign: 'center',
+                valign: 'middle',
+                cellPadding: 1,
+            },
+            didDrawCell: function (data) {
+                const colIndex = data.column.index;
+                const rowIndex = data.row.index;
+                if (data.section === 'head') return;
+                if (colIndex === 0) return;
+                const alunoIndex = body.slice(0, rowIndex + 1).filter(l => Array.isArray(l) && l.length > 1).length - 1;
+                const celInfo = (turma.alunos || [])[alunoIndex]?._celInfos?.[colIndex - 1];
+                if (!celInfo || typeof celInfo !== 'object') return;
+                const { x, y, height, width } = data.cell;
+                const centerX = x + width / 2;
+                const centerY = y + height / 2;
+                const radius = 2.5;
+                if (celInfo.isFimDeSemana) {
+                    doc.setFillColor(230);
+                    doc.rect(x, y, width, height, 'F');
+                    doc.setTextColor(100);
+                    doc.setFontSize(6);
+                    doc.text('-', centerX, centerY + 2, { align: 'center', baseline: 'middle' });
+                } else {
+                    const isPresente = celInfo.presenca === true;
+                    doc.setFillColor(isPresente ? 0 : 220, isPresente ? 200 : 0, isPresente ? 0 : 0);
+                    doc.circle(centerX, centerY, radius, 'F');
+                }
+            }
+        });
+
+        // Ao final, antes de retornar o PDF, adicionar a observação se existir:
+        if (observacao) {
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.text(`Observação: ${observacao}`, 40, doc.internal.pageSize.getHeight() - 40);
+        }
+
+    });
 
     const addFooterToAllPages = () => {
         const totalPages = doc.getNumberOfPages();
