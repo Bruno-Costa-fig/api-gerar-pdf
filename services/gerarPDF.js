@@ -225,10 +225,10 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         body: turma.presentes.map((presente) => [
           presente.nome,
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            ? moment(presente.horarioEntrada, "HH:mm").format("HH:mm")
+            ? moment(presente.horarioEntrada, "HH:mm").subtract(3, "hours").format("HH:mm")
             : "N/A",
           presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            ? moment(presente.horarioSaida, "HH:mm").format("HH:mm")
+            ? moment(presente.horarioSaida, "HH:mm").subtract(3, "hours").format("HH:mm")
             : "-",
         ]),
         didParseCell: function (data) {
