@@ -29,7 +29,7 @@ async function gerarImagemPrimeiroAcesso(nome, link, qrCodeBase64) {
     ctx.drawImage(qrCodeImage, 430, 680, qrCodeSize, qrCodeSize); // Ajuste as coordenadas conforme necessário
 
     // Adiciona o nome à imagem
-    ctx.font = '32px Roboto';
+    ctx.font = '32px helvetica';
     ctx.fillStyle = 'black';
     ctx.fillText(nome, 160, 300); // Ajuste as coordenadas conforme necessário
     

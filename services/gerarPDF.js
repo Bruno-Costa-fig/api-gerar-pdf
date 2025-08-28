@@ -1,8 +1,7 @@
 const { jsPDF } = require("jspdf");
 const { autoTable } = require('jspdf-autotable');
-const moment = require("moment");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
-const { loadImage } = require("canvas");
+// const { loadImage } = require("canvas");
 const path = require("path");
 
 
@@ -11,30 +10,14 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   let currentPage = 1;
   let countTurmas = 0;
 
-  // Configuração do ChartJSNodeCanvas
-  const width = 800; // Largura do gráfico
-  const height = 400; // Altura do gráfico
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
+  const chartBar = new ChartJSNodeCanvas({ width: 800, height: 400 });
+  const chartPie = new ChartJSNodeCanvas({ width: 400, height: 400 });
 
   // Função para gerar o gráfico de barras
   const generateBarChart = async () => {
     const labels = dados.turmas.map((turma) => turma.turma);
     const presentes = dados.turmas.map((turma) => turma.totalPresentes);
     const ausentes = dados.turmas.map((turma) => turma.totalAusentes);
-
-    // Calcular a porcentagem de presença
-    const porcentagens = dados.turmas.map((turma) => {
-      const total = turma.totalPresentes + turma.totalAusentes;
-      return total > 0 ? (turma.totalPresentes / total) * 100 : 0;
-    });
-
-    // Define as cores das barras com base na porcentagem de presença
-    const backgroundColors = porcentagens.map((porcentagem) =>
-      porcentagem = 100 ? "rgba(255, 215, 0)" : "rgba(0, 128, 0)"
-    );
-    const borderColors = porcentagens.map((porcentagem) =>
-      porcentagem = 100 ? "rgba(255, 215, 0)" : "rgba(0, 128, 0)"
-    );
 
     const configuration = {
       type: "bar",
@@ -72,26 +55,12 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
             beginAtZero: true,
           },
         },
-        animation: {
-          onComplete: async (chart) => {
-            const ctx = chart.ctx;
-            const coroaImg = await loadImage(path.join(__dirname, "assets", "coroa.png"));
-
-            chart.data.labels.forEach((label, index) => {
-              if (porcentagens[index] > 80) {
-                const meta = chart.getDatasetMeta(0).data[index];
-                const x = meta.x;
-                const y = meta.y - 20; // Ajuste para posicionar acima da barra
-                ctx.drawImage(coroaImg, x - 10, y, 20, 20); // Desenha a imagem da coroa
-              }
-            });
-          },
-        },
       },
     };
 
     // Gera o gráfico como uma imagem Base64
-    return await chartJSNodeCanvas.renderToDataURL(configuration);
+    const buffer = await chartBar.renderToBuffer(configuration);
+    return buffer.toString("base64");
   };
 
   // Função para adicionar cabeçalho
@@ -102,12 +71,12 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
     const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
-  doc.setFont("helvetica", "bold");
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.text(dados.empresa, 70, 20);
     doc.setFontSize(12);
     doc.text(`Relatório de Presença - ${dados.data}`, 70, 30);
-  doc.setFont("helvetica", "normal");
+    doc.setFont("helvetica", "normal");
   };
 
   const centralizarTexto = (text, y, bold = false) => {
@@ -157,7 +126,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
     // Gera o gráfico de barras
     const barChartBase64 = await generateBarChart();
-    doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
+    doc.addImage(`data:image/png;base64,${barChartBase64}`, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
     doc.addPage();
     currentPage++;
     addHeader();
@@ -166,7 +135,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   // Adiciona os detalhes de cada turma
-  const addTurmaDetails = async (turma, y, last) => {
+  const addTurmaDetails = async (turma, y) => {
     countTurmas++;
     doc.setFontSize(16);
     centralizarTexto(`Turma: ${turma.turma}`, y, true);
@@ -206,7 +175,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const imgWidth = 60; // Largura do gráfico de pizza
     const x = (pageWidth - imgWidth) / 2; // Centraliza o gráfico horizontalmente
-    doc.addImage(pieChartBase64, "PNG", x, y, imgWidth, imgWidth); // Adiciona o gráfico de pizza
+    doc.addImage(`data:image/png;base64,${pieChartBase64}`, "PNG", x, y, imgWidth, imgWidth); // Adiciona o gráfico de pizza
     y += imgWidth + 10;
 
     doc.setFontSize(14);
@@ -225,27 +194,25 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         body: turma.presentes.map((presente) => [
           presente.nome,
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            // ? moment(presente.horarioEntrada, "HH:mm").subtract(3, "hours").format("HH:mm")
-            ? moment(presente.horarioEntrada, "HH:mm").format("HH:mm")
+            ? formatarHorario(presente.horarioEntrada)
             : "N/A",
           presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            // ? moment(presente.horarioSaida, "HH:mm").subtract(3, "hours").format("HH:mm")
-            ? moment(presente.horarioSaida, "HH:mm").format("HH:mm")
-            : "-",
+            ? formatarHorario(presente.horarioSaida)
+            : "-"
         ]),
         didParseCell: function (data) {
           if (data.section === 'body') { // Aplica estilos apenas às células do corpo
             if (data.row.index % 2 === 0) { // Linhas pares
-                data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+              data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
             } else { // Linhas ímpares
-                data.cell.styles.fillColor = [255, 255, 255]; // Branco
+              data.cell.styles.fillColor = [255, 255, 255]; // Branco
             }
           }
           if (data.section === 'head') { // Estilo do cabeçalho
-              if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
-                  data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
-                  data.cell.styles.textColor = [255, 255, 255]; // Branco
-              }
+            if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
+              data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
+              data.cell.styles.textColor = [255, 255, 255]; // Branco
+            }
           }
         },
       });
@@ -270,19 +237,19 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         rowHeight: 6,
         didParseCell: function (data) {
           if (data.section === 'body') { // Aplica estilos apenas às células do corpo
-              if (data.row.index % 2 === 0) { // Linhas pares
-                  data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
-              } else { // Linhas ímpares
-                  data.cell.styles.fillColor = [255, 255, 255]; // Branco
-              }
+            if (data.row.index % 2 === 0) { // Linhas pares
+              data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
+            } else { // Linhas ímpares
+              data.cell.styles.fillColor = [255, 255, 255]; // Branco
+            }
           }
           if (data.section === 'head') { // Estilo do cabeçalho
-              if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
-                  data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
-                  data.cell.styles.textColor = [255, 255, 255]; // Branco
-              }
+            if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
+              data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
+              data.cell.styles.textColor = [255, 255, 255]; // Branco
+            }
           }
-      },
+        },
       });
       y = doc.lastAutoTable.finalY + 10;
     }
@@ -298,8 +265,6 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   };
 
   const generatePieChart = async (turma) => {
-    const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 400, height: 400 });
-
     // Calcula o total de alunos
     const totalAlunos = turma.totalPresentes + turma.totalAusentes;
 
@@ -309,40 +274,42 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
     // Atualiza os rótulos com as porcentagens
     const labels = [
-        `Alunos Presentes - ${porcentagemPresentes}%`,
-        `Alunos Ausentes - ${porcentagemAusentes}%`,
+      `Alunos Presentes - ${porcentagemPresentes}%`,
+      `Alunos Ausentes - ${porcentagemAusentes}%`,
     ];
 
     const configuration = {
-        type: "pie",
-        data: {
-            labels, // Usa os rótulos atualizados
-            datasets: [
-                {
-                    data: [turma.totalPresentes, turma.totalAusentes],
-                    backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
-                    borderWidth: 0,
-                },
-            ],
+      type: "pie",
+      data: {
+        labels, // Usa os rótulos atualizados
+        datasets: [
+          {
+            data: [turma.totalPresentes, turma.totalAusentes],
+            backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "top",
+            labels: {
+              font: {
+                size: 20
+              }
+            }
+          },
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: "top",
-                    labels: {
-                      font: {
-                        size: 20
-                      }
-                    }
-                },
-            },
-        },
+      },
     };
 
     // Gera o gráfico como uma imagem Base64
-    return await chartJSNodeCanvas.renderToDataURL(configuration);
-};
+    const buffer = await chartPie.renderToBuffer(configuration);
+    return buffer.toString("base64");
+  }
+
 
   // Gera o PDF
   addHeader();
@@ -350,22 +317,21 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
 
   for (const turma of dados.turmas) {
     if (turma.ausentes.length === 0 && turma.presentes.length === 0) {
-      return;
+      continue;
     }
-
     y = await addTurmaDetails(turma, y);
   }
 
   // Função para adicionar o rodapé em todas as páginas
-const addFooterToAllPages = () => {
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
+  const addFooterToAllPages = () => {
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i); // Define a página atual
       doc.setFontSize(10);
       doc.text(`Página ${i} de ${totalPages}`, 10, 290); // Número da página no lado esquerdo
       doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
-  }
-};
+    }
+  };
 
   addFooterToAllPages();
 
@@ -373,5 +339,22 @@ const addFooterToAllPages = () => {
   const pdfContent = doc.output("arraybuffer");
   return Buffer.from(pdfContent);
 }
+
+function formatarHorario(horario) {
+  if (!horario || horario === "N/A") return "N/A";
+
+  // cria uma data "fictícia" no dia 1/1/1970 só com a hora/minuto
+  const [hora, minuto] = horario.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hora, minuto, 0, 0);
+
+  return formatHora.format(date);
+}
+
+const formatHora = new Intl.DateTimeFormat("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false // força 24h
+});
 
 module.exports = gerarPDF;
