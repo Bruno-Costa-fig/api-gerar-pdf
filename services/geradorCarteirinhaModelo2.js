@@ -2,6 +2,7 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 const { jsPDF } = require("jspdf");
+const QRCode = require('qrcode');
 
 async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outputPath) {
     const canvas = createCanvas(408, 648); // Tamanho da carteirinha
@@ -14,8 +15,8 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
     const frente = await loadImage(frentePath);
 
     // Decodificar o QR Code Base64
-    const qrCodeBuffer = Buffer.from(qrCodeBase64, "base64");
-    const qrCode = await loadImage(qrCodeBuffer);
+    // const qrCodeBuffer = Buffer.from(qrCodeBase64, "base64");
+    // const qrCode = await loadImage(qrCodeBuffer);
 
     // Desenhar a frente no canvas
     ctx.drawImage(frente, 0, 0, 408, 648);
@@ -24,6 +25,14 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
     ctx.imageSmoothingEnabled = true;
 
     // Desenhar QR Code
+    // ctx.drawImage(qrCode, 126, 408, 155, 155);
+    const qrCodeSvg = await QRCode.toString(JSON.stringify({
+        Aluno: nomeAluno,
+        ExternalReference: entity.ExternalReference,
+        Turma: nomeTurma
+    }), { type: 'svg' });
+    const qrCodeBuffer = Buffer.from(qrCodeSvg);
+    const qrCode = await loadImage(qrCodeBuffer);
     ctx.drawImage(qrCode, 126, 408, 155, 155);
 
     // Adicionar textos
@@ -62,6 +71,7 @@ async function gerarPdfCarteirinhasModelo2(alunos) {
             const carteirinhaPath = await gerarCarteirinhaModelo2(
                 aluno.name,
                 aluno.turma,
+                aluno.externalReference,
                 aluno.qrCode,
                 tempPath
             );

@@ -102,24 +102,24 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
     const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
     const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
-    doc.setFont("Roboto-Bold", "bold");
+  doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.text(dados.empresa, 70, 20);
     doc.setFontSize(12);
     doc.text(`Relatório de Presença - ${dados.data}`, 70, 30);
-    doc.setFont("Roboto-Bold", "normal");
+  doc.setFont("helvetica", "normal");
   };
 
   const centralizarTexto = (text, y, bold = false) => {
     if (bold) {
-      doc.setFont("Roboto-Bold", "bold");
+      doc.setFont("helvetica", "bold");
     }
     const pageWidth = doc.internal.pageSize.getWidth();
     const textWidth = doc.getTextWidth(text);
     const x = (pageWidth - textWidth) / 2; // Calcula a posição X para centralizar
     doc.text(text, x, y);
     if (bold) {
-      doc.setFont("Roboto-Bold", "normal");
+      doc.setFont("helvetica", "normal");
     }
   }
 
@@ -225,10 +225,12 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         body: turma.presentes.map((presente) => [
           presente.nome,
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            ? moment(presente.horarioEntrada, "HH:mm").subtract(3, "hours").format("HH:mm")
+            // ? moment(presente.horarioEntrada, "HH:mm").subtract(3, "hours").format("HH:mm")
+            ? moment(presente.horarioEntrada, "HH:mm").format("HH:mm")
             : "N/A",
           presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            ? moment(presente.horarioSaida, "HH:mm").subtract(3, "hours").format("HH:mm")
+            // ? moment(presente.horarioSaida, "HH:mm").subtract(3, "hours").format("HH:mm")
+            ? moment(presente.horarioSaida, "HH:mm").format("HH:mm")
             : "-",
         ]),
         didParseCell: function (data) {
