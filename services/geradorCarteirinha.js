@@ -2,27 +2,28 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
-let _fundoCache = null;
-let _modeloCache = null;
+let _fundoBuffer = null;
+let _modeloBuffer = null;
 
-async function getImagensBase(){
-    if(!_fundoCache){
-        const fundoPath = path.join(__dirname, "assets", "base", "fundo.png");
-        _fundoCache = await loadImage(fundoPath);
+async function getBuffersBase(){
+    if(!_fundoBuffer){
+        const fundoPath = fs.readFileSync(path.join(__dirname, "assets", "base", "fundo.png"), "utf8");
+        _fundoBuffer = await loadImage(fundoPath);
     }
-    if(!_modeloCache){
-        const modeloPath = path.join(__dirname, "assets", "base", "frente.png");
-        _modeloCache = await loadImage(modeloPath);
+    if(!_modeloBuffer){
+        const modeloPath = fs.readFileSync(path.join(__dirname, "assets", "base", "frente.png"), "utf8");
+        _modeloBuffer = await loadImage(modeloPath);
     }
-    return { fundo: _fundoCache, modelo: _modeloCache };
+    return { fundo: _fundoBuffer, modelo: _modeloBuffer };
 }
 
 async function gerarCarteirinhaBuffer(nomeAluno, nomeTurma, qrCodeBase64, nomeEscola) {
     const canvas = createCanvas(1600, 400); // Tamanho da carteirinha
     const ctx = canvas.getContext("2d");
 
-    const { fundo, modelo } = await getImagensBase();
-
+    const { fundoBuffer, modeloBuffer } = await getBuffersBase();
+    const fundo = await loadImage(fundoBuffer);
+    const modelo = await loadImage(modeloBuffer);
     // Decodificar o QR Code Base64
     const qrCodeBuffer = Buffer.from(qrCodeBase64, "base64");
     const qrCode = await loadImage(qrCodeBuffer);
@@ -54,6 +55,10 @@ async function gerarCarteirinhaBuffer(nomeAluno, nomeTurma, qrCodeBase64, nomeEs
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpar o canvas para liberar memória
     canvas.width = 0; // Redefinir o tamanho do canvas para liberar memória
     canvas.height = 0;
+
+    fundo.src = "";
+    modelo.src = "";
+    qrCode.src = "";
 
     return buffer;
 }
