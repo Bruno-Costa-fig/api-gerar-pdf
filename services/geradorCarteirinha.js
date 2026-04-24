@@ -2,17 +2,26 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
-async function gerarCarteirinha(nomeAluno, nomeTurma, qrCodeBase64, nomeEscola) {
+let _fundoCache = null;
+let _modeloCache = null;
+
+async function getImagensBase(){
+    if(!_fundoCache){
+        const fundoPath = path.join(__dirname, "assets", "base", "fundo.png");
+        _fundoCache = await loadImage(fundoPath);
+    }
+    if(!_modeloCache){
+        const modeloPath = path.join(__dirname, "assets", "base", "frente.png");
+        _modeloCache = await loadImage(modeloPath);
+    }
+    return { fundo: _fundoCache, modelo: _modeloCache };
+}
+
+async function gerarCarteirinhaBuffer(nomeAluno, nomeTurma, qrCodeBase64, nomeEscola) {
     const canvas = createCanvas(1600, 400); // Tamanho da carteirinha
     const ctx = canvas.getContext("2d");
 
-    // Caminhos para as imagens de fundo e modelo
-    const fundoPath = path.join(__dirname, "assets", "base", "fundo.png");
-    const modeloPath = path.join(__dirname, "assets", "base", "frente.png");
-
-    // Carregar as imagens de fundo e modelo
-    const fundo = await loadImage(fundoPath);
-    const modelo = await loadImage(modeloPath);
+    const { fundo, modelo } = await getImagensBase();
 
     // Decodificar o QR Code Base64
     const qrCodeBuffer = Buffer.from(qrCodeBase64, "base64");
@@ -27,10 +36,6 @@ async function gerarCarteirinha(nomeAluno, nomeTurma, qrCodeBase64, nomeEscola) 
     ctx.font = "18px Arial";
     ctx.fillStyle = "#3339a6";
     ctx.fillText(nomeEscola, 980, 60);
-
-    // Adicionar textos
-    ctx.font = "18px Arial";
-    ctx.fillStyle = "#3339a6";
     ctx.fillText(nomeEscola, 180, 60);
 
     ctx.font = "20px Arial";
@@ -44,11 +49,13 @@ async function gerarCarteirinha(nomeAluno, nomeTurma, qrCodeBase64, nomeEscola) 
     ctx.font = "16px Arial";
     ctx.fillText(nomeTurma, 95, 170);
 
-    // Salvar ou retornar a imagem final
-    const outputPath = `carteirinha-${nomeAluno.replace(/\s/g, "_")}.png`;
     const buffer = canvas.toBuffer("image/png");
-    fs.writeFileSync(outputPath, buffer);
-    return outputPath;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpar o canvas para liberar memória
+    canvas.width = 0; // Redefinir o tamanho do canvas para liberar memória
+    canvas.height = 0;
+
+    return buffer;
 }
 
 async function gerarPdfCarteirinhas(alunos, nomeEscola) {
@@ -66,25 +73,19 @@ async function gerarPdfCarteirinhas(alunos, nomeEscola) {
     let y = 10; // Margem inicial no eixo Y
     const cardWidth = 430; // Largura da carteirinha
     const cardHeight = 150; // Altura da carteirinha
-    const carteirinhaPaths = [];
 
     for (let i = 0; i < alunos.length; i++) {
         const aluno = alunos[i];
 
         // Gerar a imagem da carteirinha
-        const carteirinhaPath = await gerarCarteirinha(
+        const carteirinhaBuffer = await gerarCarteirinhaBuffer(
             aluno.name,
             aluno.turma,
             aluno.qrCode, // QR Code já em Base64
             nomeEscola
         );
         
-        carteirinhaPaths.push(carteirinhaPath); // Adicionar o caminho ao array
-
-        // Carregar a imagem gerada
-        const carteirinhaBase64 = fs.readFileSync(carteirinhaPath, {
-            encoding: "base64",
-        });
+        const carteirinhaBase64 = carteirinhaBuffer.toString("base64");
 
         // Adicionar a imagem ao PDF
         doc.addImage(carteirinhaBase64, "PNG", x, y, cardWidth, cardHeight);
@@ -101,15 +102,6 @@ async function gerarPdfCarteirinhas(alunos, nomeEscola) {
             doc.addPage();
             x = 10;
             y = 10;
-        }
-    }
-
-    // Remover os arquivos PNG gerados
-    for (const path of carteirinhaPaths) {
-        try {
-            fs.unlinkSync(path); // Apagar o arquivo
-        } catch (error) {
-            console.error(`Erro ao apagar o arquivo ${path}:`, error.message);
         }
     }
 
