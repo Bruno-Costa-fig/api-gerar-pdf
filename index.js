@@ -5,6 +5,9 @@ const { gerarImagemPrimeiroAcesso } = require('./services/gerarImagemPrimeiroAce
 const app = express();
 const port = 3003;
 
+const { gerarPdfCarteirinhas } = require('./services/geradorCarteirinha');
+const { gerarPdfCarteirinhasModelo2 } = require('./services/geradorCarteirinhaModelo2');
+
 app.use(express.json({ limit: "50mb" }));
 
 // Lê os arquivos Base64 das logos
@@ -70,10 +73,13 @@ app.post('/gerarPDF', async (req, res) => {
 });
 
 app.post('/gerar-carteirinhas', async (req, res) => {
-  const { gerarPdfCarteirinhas } = require('./services/geradorCarteirinha');
-  const { gerarPdfCarteirinhasModelo2 } = require('./services/geradorCarteirinhaModelo2');
+
   try {
     const dados = req.body;
+
+    if (!dados.Alunos || !dados.NomeEscola) {
+      return res.status(400).json({ error: 'Dados inválidos ou não informados' });
+    }
 
     const alunos = dados.Alunos.map((aluno) => ({
       name: aluno.Name,
@@ -81,33 +87,43 @@ app.post('/gerar-carteirinhas', async (req, res) => {
       qrCode: aluno.QrCode,
     }));
     const nomeEscola = dados.NomeEscola;
-
-    if (!alunos || !nomeEscola) {
-      return res.status(400).json({ error: 'Dados inválidos ou não informados' });
-    }
+    const modelo = req.query.modelo == 2;
 
     // Gera o PDF com as carteirinhas
-    let pdfBuffer;
+    let pdfBuffer = modelo
+      ? await gerarPdfCarteirinhasModelo2(alunos, nomeEscola)
+      : await gerarPdfCarteirinhas(alunos, nomeEscola);
 
-    if (!!req.query.modelo && req.query.modelo == 2) {
-      pdfBuffer = await gerarPdfCarteirinhasModelo2(alunos, nomeEscola);
-    } else {
-      pdfBuffer = await gerarPdfCarteirinhas(alunos, nomeEscola);
-    }
-
-    // Define o nome do arquivo
-    const fileName = 'carteirinhas.pdf';
-
-    // Define os cabeçalhos para download do arquivo
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="carteirinhas.pdf"');
+    res.setHeader('Content-Length', pdfBuffer.length); // ✅ ajuda o cliente fechar a conexão mais rápido
+
+    const { Readable } = require('stream');
+    const stream = Readable.from(pdfBuffer);
+    stream.pipe(res);
 
     // Envia o arquivo PDF
-    res.send(pdfBuffer);
+    stream.on('end', () => {
+      pdfBuffer = null
+      if (global.gc) {
+        global.gc(); // Força GC + devolução ao OS
+      }
+    });
   } catch (error) {
     console.error('Erro ao gerar o PDF:', error);
     res.status(500).send('Erro ao gerar o PDF');
   }
+});
+
+// Adiciona essa rota temporária
+app.get('/memoria', (req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    heapUsed: `${Math.round(mem.heapUsed / 1024 / 1024)}MB`,
+    heapTotal: `${Math.round(mem.heapTotal / 1024 / 1024)}MB`,
+    rss: `${Math.round(mem.rss / 1024 / 1024)}MB`, // memória total do processo
+    external: `${Math.round(mem.external / 1024 / 1024)}MB`, // memória nativa (canvas!)
+  });
 });
 
 app.post('/relatorio-turma-detalhado', async (req, res) => {
