@@ -19,6 +19,7 @@ app.get('/', (req, res) => {
 
 app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
+
   try {
     // Verifica se os dados foram enviados
     const dados = req.body;
@@ -33,42 +34,38 @@ app.post('/gerarPDF', async (req, res) => {
     const dadosTotais = {
       empresa: dados.Empresa,
       organizationId: dados.OrganizationId,
-      turmas: dados.Turmas,
       totalPresentes: dados.TotalPresentes,
-      data: dados.Data,
       totalAusentes: dados.TotalAusentes,
-    }
-
-    dadosTotais.turmas = dados.Turmas.map((turma) => ({
-      turma: turma.Turma,
-      totalPresentes: turma.TotalPresentes,
-      totalAusentes: turma.TotalAusentes,
-      presentes: turma.Presentes.map((presente) => ({
-        nome: presente.Nome,
-        horarioEntrada: presente.HorarioEntrada,
-        horarioSaida: presente.HorarioSaida,
+      data: dados.Data,
+      turmas: dados.Turmas.map((turma) => ({
+        turma: turma.Turma,
+        totalPresentes: turma.TotalPresentes,
+        totalAusentes: turma.TotalAusentes,
+        presentes: turma.Presentes.map((p) => ({
+          nome: p.Nome,
+          horarioEntrada: p.HorarioEntrada,
+          horarioSaida: p.HorarioSaida,
+        })),
+        ausentes: turma.Ausentes.map((a) => ({
+          nome: a.Nome,
+          horarioEntrada: a.HorarioEntrada,
+        })),
       })),
-      ausentes: turma.Ausentes.map((ausente) => ({
-        nome: ausente.Nome,
-        horarioEntrada: ausente.HorarioEntrada,
-      })),
-    }));
+    };
 
     // Gera o conteúdo do PDF
     const pdfBuffer = await gerarPDF(dadosTotais, logoEscolaBase64, logoPresencaBase64);
 
     // Define o nome do arquivo
-    const fileName = 'relatorio.pdf';
-
-    // Define os cabeçalhos para download do arquivo
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    // Envia o arquivo PDF
+    res.setHeader('Content-Disposition', 'attachment; filename="relatorio.pdf"');
+    res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar o PDF:', error);
     res.status(500).send('Erro ao gerar o PDF');
+  } finally {
+    
   }
 });
 
