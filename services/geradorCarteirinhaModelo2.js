@@ -3,13 +3,22 @@ const fs = require("fs");
 const path = require("path");
 const { jsPDF } = require("jspdf");
 
-async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outputPath) {
+async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outputPath, organizationId) {
     const canvas = createCanvas(408, 648); // Tamanho da carteirinha
     const ctx = canvas.getContext("2d");
 
     // Caminhos para as imagens de fundo
-    const frentePath = path.join(__dirname, "assets", "modelos", "edson", "modelo2", "frente2.png");
-
+    const frentePath = ""
+    console.log("Organization ID:", organizationId);
+    console.log("Dirname:", __dirname);
+    switch (organizationId) {
+        case 1:
+            frentePath = path.join(__dirname, "assets", "modelos", "edson", "modelo2", "frente2.png");
+            break;
+        case 3:
+            frentePath = path.join(__dirname, "assets", "modelos", "fonsecamota", "frente.png");
+            break;
+    }
     // Carregar a imagem de fundo
     const frente = await loadImage(frentePath);
 
@@ -45,7 +54,7 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
     return filePath;
 }
 
-async function gerarPdfCarteirinhasModelo2(alunos) {
+async function gerarPdfCarteirinhasModelo2(alunos, organizationId) {
     // Criar a pasta temp dentro do projeto
     const tempPath = path.join(__dirname, "temp", "carteirinhas", `${Date.now()}`);
     try {
@@ -63,7 +72,8 @@ async function gerarPdfCarteirinhasModelo2(alunos) {
                 aluno.name,
                 aluno.turma,
                 aluno.qrCode,
-                tempPath
+                tempPath,
+                organizationId
             );
             carteirinhaPaths.push(carteirinhaPath);
         }
