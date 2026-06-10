@@ -9,7 +9,7 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
 
     // Caminhos para as imagens de fundo
     let frentePath = ""
-    switch (organizationId) {
+    switch (parseInt(organizationId)) {
         case 1:
             frentePath = path.join(__dirname, "assets", "modelos", "edson", "modelo2", "frente2.png");
             break;
