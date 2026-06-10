@@ -77,7 +77,7 @@ app.post('/gerar-carteirinhas', async (req, res) => {
     if (!dados.Alunos || !dados.NomeEscola) {
       return res.status(400).json({ error: 'Dados inválidos ou não informados' });
     }
-
+    console.log("body recebido:", JSON.stringify(dados));
     const alunos = dados.Alunos.map((aluno) => ({
       name: aluno.Name,
       turma: aluno.Turma.Name,
