@@ -18,6 +18,7 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
             break;
     }
     // Carregar a imagem de fundo
+    console.log("frentePath:", frentePath);
     const frente = await loadImage(frentePath);
 
     // Decodificar o QR Code Base64
