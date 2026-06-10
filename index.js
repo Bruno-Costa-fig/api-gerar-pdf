@@ -74,17 +74,17 @@ app.post('/gerar-carteirinhas', async (req, res) => {
   try {
     const dados = req.body;
 
-    if (!dados.Alunos || !dados.NomeEscola) {
+    if (!dados.alunos || !dados.nomeEscola) {
       return res.status(400).json({ error: 'Dados inválidos ou não informados' });
     }
-    console.log("body recebido:", JSON.stringify(dados));
-    const alunos = dados.Alunos.map((aluno) => ({
+    // console.log("body recebido:", JSON.stringify(dados));
+    const alunos = dados.alunos.map((aluno) => ({
       name: aluno.Name,
       turma: aluno.Turma.Name,
       qrCode: aluno.QrCode,
     }));
-    const nomeEscola = dados.NomeEscola;
-    const organizationId = parseInt(req.query.organizationId);
+    const nomeEscola = dados.nomeEscola;
+    const organizationId = dados.organizationId || 'organization-1'; // valor padrão caso não seja fornecido
     const modelo = req.query.modelo == 2;
 
     // Gera o PDF com as carteirinhas
