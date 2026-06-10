@@ -245,12 +245,12 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
           presente.nome,
           // Entrada
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            ? moment.utc(presente.horarioEntrada, "HH:mm").utcOffset(-3).format("HH:mm")
+            ? presente.horarioEntrada
             : "N/A",
 
           // Saída
           presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            ? moment.utc(presente.horarioSaida, "HH:mm").utcOffset(-3).format("HH:mm")
+            ? presente.horarioSaida
             : "-",
         ]),
         didParseCell: function (data) {
