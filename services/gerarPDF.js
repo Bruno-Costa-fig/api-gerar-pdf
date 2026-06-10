@@ -19,14 +19,14 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
   const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
 
-    // Função para adicionar cabeçalho
+  // Função para adicionar cabeçalho
   const addHeader = () => {
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
     doc.setFont("Roboto-Bold", "bold");
     doc.setFontSize(16);
-    doc.text(dados.empresa, 70, 20);
+    doc.text(dados.empresa, 60, 20);
     doc.setFontSize(12);
-    doc.text(`Relatório de Presença - ${dados.data}`, 70, 30);
+    doc.text(`Relatório de Presença - ${dados.data}`, 60, 30);
     doc.setFont("Roboto-Bold", "normal");
   };
 
@@ -92,7 +92,7 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
           },
         },
       },
-    }; 
+    };
 
     // Gera o gráfico como uma imagem Base64
     return await barChartCanvas.renderToDataURL(configuration);
@@ -243,11 +243,14 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         rowHeight: 6,
         body: turma.presentes.map((presente) => [
           presente.nome,
+          // Entrada
           presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            ? moment(presente.horarioEntrada, "HH:mm").subtract(3, "hours").format("HH:mm")
+            ? moment.utc(presente.horarioEntrada, "HH:mm").utcOffset(-3).format("HH:mm")
             : "N/A",
+
+          // Saída
           presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            ? moment(presente.horarioSaida, "HH:mm").subtract(3, "hours").format("HH:mm")
+            ? moment.utc(presente.horarioSaida, "HH:mm").utcOffset(-3).format("HH:mm")
             : "-",
         ]),
         didParseCell: function (data) {
