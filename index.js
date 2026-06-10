@@ -84,7 +84,7 @@ app.post('/gerar-carteirinhas', async (req, res) => {
       qrCode: aluno.QrCode,
     }));
     const nomeEscola = dados.NomeEscola;
-    const organizationId = dados.OrganizationId;
+    const organizationId = parseInt(req.query.organizationId);
     const modelo = req.query.modelo == 2;
 
     // Gera o PDF com as carteirinhas
