@@ -8,9 +8,7 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
     const ctx = canvas.getContext("2d");
 
     // Caminhos para as imagens de fundo
-    const frentePath = ""
-    console.log("Organization ID:", organizationId);
-    console.log("Dirname:", __dirname);
+    let frentePath = ""
     switch (organizationId) {
         case 1:
             frentePath = path.join(__dirname, "assets", "modelos", "edson", "modelo2", "frente2.png");
