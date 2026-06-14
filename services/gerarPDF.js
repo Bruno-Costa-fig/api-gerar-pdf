@@ -4,56 +4,53 @@ const moment = require("moment");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 const { loadImage } = require("canvas");
 const path = require("path");
+const montserrat = require('./montserratFont');
 
 const barChartCanvas = new ChartJSNodeCanvas({ width: 800, height: 400 });
 const pieChartCanvas = new ChartJSNodeCanvas({ width: 400, height: 400 });
+
 
 async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
   const doc = new jsPDF();
   let currentPage = 1;
   let countTurmas = 0;
 
+  doc.addFileToVFS('Montserrat-Regular.ttf', montserrat.regular);
+  doc.addFont('Montserrat-Regular.ttf', 'Montserrat', 'normal');
+
+  doc.addFileToVFS('Montserrat-Bold.ttf', montserrat.bold);
+  doc.addFont('Montserrat-Bold.ttf', 'Montserrat', 'bold');
+
   const imgProps = doc.getImageProperties(logoEscolaBase64);
   const aspectRatio = imgProps.width / imgProps.height;
-  const maxDimension = 40; // Define um tamanho máximo para largura ou altura
+  const maxDimension = 40;
   const imgWidth = aspectRatio >= 1 ? maxDimension : maxDimension * aspectRatio;
   const imgHeight = aspectRatio >= 1 ? maxDimension / aspectRatio : maxDimension;
 
-  // Função para adicionar cabeçalho
   const addHeader = () => {
     doc.addImage(logoEscolaBase64, "PNG", 10, 10, imgWidth, imgHeight);
-    doc.setFont("Roboto-Bold", "bold");
+    doc.setFont("Montserrat", "bold");
     doc.setFontSize(16);
     doc.text(dados.empresa, 60, 20);
     doc.setFontSize(12);
     doc.text(`Relatório de Presença - ${dados.data}`, 60, 30);
-    doc.setFont("Roboto-Bold", "normal");
+    doc.setFont("Montserrat", "normal");
   };
 
   const centralizarTexto = (text, y, bold = false) => {
-    if (bold) {
-      doc.setFont("Roboto-Bold", "bold");
-    }
+    if (bold) doc.setFont("Montserrat", "bold");
     const pageWidth = doc.internal.pageSize.getWidth();
     const textWidth = doc.getTextWidth(text);
-    const x = (pageWidth - textWidth) / 2; // Calcula a posição X para centralizar
+    const x = (pageWidth - textWidth) / 2;
     doc.text(text, x, y);
-    if (bold) {
-      doc.setFont("Roboto-Bold", "normal");
-    }
-  }
+    if (bold) doc.setFont("Montserrat", "normal");
+  };
 
-  // Função para gerar o gráfico de barras
   const generateBarChart = async () => {
     const labels = dados.turmas.map((turma) => turma.turma);
     const presentes = dados.turmas.map((turma) => turma.totalPresentes);
     const ausentes = dados.turmas.map((turma) => turma.totalAusentes);
-
-    // Calcular a porcentagem de presença
-    const porcentagens = dados.turmas.map((turma) => {
-      const total = turma.totalPresentes + turma.totalAusentes;
-      return total > 0 ? (turma.totalPresentes / total) * 100 : 0;
-    });
+    const justificados = dados.turmas.map((turma) => turma.totalJustificados);
 
     const configuration = {
       type: "bar",
@@ -63,8 +60,8 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
           {
             label: "Alunos Presentes",
             data: presentes,
-            backgroundColor: "rgba(0, 128, 0)", // Cores dinâmicas
-            borderColor: "rgba(0, 128, 0)", // Bordas dinâmicas
+            backgroundColor: "rgba(0, 128, 0)",
+            borderColor: "rgba(0, 128, 0)",
             borderWidth: 1,
           },
           {
@@ -74,52 +71,46 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
             borderColor: "rgba(161, 35, 16)",
             borderWidth: 1,
           },
+          {
+            label: "Falta Justificada",
+            data: justificados,
+            backgroundColor: "rgba(230, 160, 0)",
+            borderColor: "rgba(230, 160, 0)",
+            borderWidth: 1,
+          },
         ],
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: {
-            position: "top",
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-          },
-          y: {
-            beginAtZero: true,
-          },
-        },
+        plugins: { legend: { position: "top" } },
+        scales: { x: { beginAtZero: true }, y: { beginAtZero: true } },
       },
     };
 
-    // Gera o gráfico como uma imagem Base64
     return await barChartCanvas.renderToDataURL(configuration);
   };
 
   const generatePieChart = async (turma) => {
-    // Calcula o total de alunos
-    const totalAlunos = turma.totalPresentes + turma.totalAusentes;
+    const totalAlunos = turma.totalPresentes + turma.totalAusentes + turma.totalJustificados;
 
-    // Calcula as porcentagens
-    const porcentagemPresentes = ((turma.totalPresentes / totalAlunos) * 100).toFixed(2);
-    const porcentagemAusentes = ((turma.totalAusentes / totalAlunos) * 100).toFixed(2);
+    const pPresentes = ((turma.totalPresentes / totalAlunos) * 100).toFixed(2);
+    const pAusentes = ((turma.totalAusentes / totalAlunos) * 100).toFixed(2);
+    const pJustificados = ((turma.totalJustificados / totalAlunos) * 100).toFixed(2);
 
-    // Atualiza os rótulos com as porcentagens
     const labels = [
-      `Alunos Presentes - ${porcentagemPresentes}%`,
-      `Alunos Ausentes - ${porcentagemAusentes}%`,
+      `Presentes - ${pPresentes}%`,
+      `Ausentes - ${pAusentes}%`,
+      `Justificados - ${pJustificados}%`,
     ];
 
     const configuration = {
       type: "pie",
       data: {
-        labels, // Usa os rótulos atualizados
+        labels,
         datasets: [
           {
-            data: [turma.totalPresentes, turma.totalAusentes],
-            backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)"], // Verde e vermelho
+            data: [turma.totalPresentes, turma.totalAusentes, turma.totalJustificados],
+            backgroundColor: ["rgba(0, 128, 0)", "rgba(161, 35, 16)", "rgba(230, 160, 0)"],
             borderWidth: 0,
           },
         ],
@@ -129,110 +120,101 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         plugins: {
           legend: {
             position: "top",
-            labels: {
-              font: {
-                size: 20
-              }
-            }
+            labels: { font: { size: 20 } },
           },
         },
       },
     };
 
-    // Gera o gráfico como uma imagem Base64
     return await pieChartCanvas.renderToDataURL(configuration);
   };
 
-  // Adiciona a tabela de totais na primeira página
   const addTotalsTable = async () => {
-    let y = 50; // Posição inicial no eixo Y
+    let y = 50;
     doc.setFontSize(14);
     centralizarTexto("Resumo Geral", y, true);
     y += 10;
 
     autoTable(doc, {
       startY: y,
-      head: [["Total Presentes", "Total Ausentes"]],
-      body: [[dados.totalPresentes, dados.totalAusentes]],
+      head: [["Total Presentes", "Total Ausentes", "Total Justificados"]],
+      body: [[dados.totalPresentes, dados.totalAusentes, dados.totalJustificados]],
       didParseCell: function (data) {
-        if (data.section === 'head') { // Estilo do cabeçalho
+        if (data.section === 'head') {
           if (data.column.dataKey === 0) {
-            data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
-            data.cell.styles.textColor = [255, 255, 255]; // Branco
+            data.cell.styles.fillColor = [0, 128, 0];
+            data.cell.styles.textColor = [255, 255, 255];
           }
           if (data.column.dataKey === 1) {
-            data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
-            data.cell.styles.textColor = [255, 255, 255]; // Branco
+            data.cell.styles.fillColor = [161, 35, 16];
+            data.cell.styles.textColor = [255, 255, 255];
           }
-        } else { // Estilo das células da tabela
-          if (data.column.dataKey === 0) {
-            data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
+          if (data.column.dataKey === 2) {
+            data.cell.styles.fillColor = [230, 160, 0];
+            data.cell.styles.textColor = [255, 255, 255];
           }
-          if (data.column.dataKey === 1) {
-            data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
-          }
+        } else {
+          if (data.column.dataKey === 0) data.cell.styles.fillColor = [230, 247, 234];
+          if (data.column.dataKey === 1) data.cell.styles.fillColor = [245, 223, 223];
+          if (data.column.dataKey === 2) data.cell.styles.fillColor = [255, 243, 205];
         }
-      }
+      },
     });
 
-    // Gera o gráfico de barras
     const barChartBase64 = await generateBarChart();
-    doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80); // Adiciona o gráfico de barras
+    doc.addImage(barChartBase64, "PNG", 10, 90, 190, 80);
     doc.addPage();
     currentPage++;
     addHeader();
-    y = 50;
-    return y; // Retorna a posição Y para continuar o conteúdo
+    return 50;
   };
 
-  // Adiciona os detalhes de cada turma
   const addTurmaDetails = async (turma, y, last) => {
     countTurmas++;
     doc.setFontSize(16);
     centralizarTexto(`Turma: ${turma.turma}`, y, true);
     y += 5;
 
-    // Adiciona a tabela de totais da turma
     autoTable(doc, {
       startY: y,
-      head: [["Total Presentes", "Total Ausentes"]],
-      body: [[turma.totalPresentes, turma.totalAusentes]],
+      head: [["Total Presentes", "Total Ausentes", "Total Justificados"]],
+      body: [[turma.totalPresentes, turma.totalAusentes, turma.totalJustificados]],
       didParseCell: function (data) {
         if (data.section === "head") {
           if (data.column.dataKey === 0) {
-            data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
-            data.cell.styles.textColor = [255, 255, 255]; // Branco
+            data.cell.styles.fillColor = [0, 128, 0];
+            data.cell.styles.textColor = [255, 255, 255];
           }
           if (data.column.dataKey === 1) {
-            data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
-            data.cell.styles.textColor = [255, 255, 255]; // Branco
+            data.cell.styles.fillColor = [161, 35, 16];
+            data.cell.styles.textColor = [255, 255, 255];
+          }
+          if (data.column.dataKey === 2) {
+            data.cell.styles.fillColor = [230, 160, 0];
+            data.cell.styles.textColor = [255, 255, 255];
           }
         } else {
-          if (data.column.dataKey === 0) {
-            data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
-          }
-          if (data.column.dataKey === 1) {
-            data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
-          }
+          if (data.column.dataKey === 0) data.cell.styles.fillColor = [230, 247, 234];
+          if (data.column.dataKey === 1) data.cell.styles.fillColor = [245, 223, 223];
+          if (data.column.dataKey === 2) data.cell.styles.fillColor = [255, 243, 205];
         }
       },
     });
 
-    // Atualiza o valor de `y` após a tabela
     y = doc.lastAutoTable.finalY + 5;
-    // Gera o gráfico de pizza para a turma
+
     const pieChartBase64 = await generatePieChart(turma);
     const pageWidth = doc.internal.pageSize.getWidth();
-    const imgWidth = 60; // Largura do gráfico de pizza
-    const x = (pageWidth - imgWidth) / 2; // Centraliza o gráfico horizontalmente
-    doc.addImage(pieChartBase64, "PNG", x, y, imgWidth, imgWidth); // Adiciona o gráfico de pizza
-    y += imgWidth + 10;
+    const pieWidth = 60;
+    const x = (pageWidth - pieWidth) / 2;
+    doc.addImage(pieChartBase64, "PNG", x, y, pieWidth, pieWidth);
+    y += pieWidth + 10;
 
     doc.setFontSize(14);
     centralizarTexto("Lista de Alunos:", y, true);
     y += 10;
 
-    // Adiciona a tabela de presentes
+    // Tabela de presentes
     if (turma.presentes.length > 0) {
       doc.setFontSize(12);
       centralizarTexto("Presentes:", y, true);
@@ -241,39 +223,31 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
         startY: y,
         head: [["Nome", "Horário de Entrada", "Horário de Saída"]],
         rowHeight: 6,
-        body: turma.presentes.map((presente) => [
-          presente.nome,
-          // Entrada
-          presente.horarioEntrada !== "N/A" && presente.horarioEntrada !== null
-            ? presente.horarioEntrada
-            : "N/A",
-
-          // Saída
-          presente.horarioSaida !== "N/A" && !!presente.horarioSaida
-            ? presente.horarioSaida
-            : "-",
+        body: turma.presentes.map((p) => [
+          p.nome,
+          p.horarioEntrada !== "N/A" && p.horarioEntrada !== null ? p.horarioEntrada : "N/A",
+          p.horarioSaida !== "N/A" && !!p.horarioSaida ? p.horarioSaida : "-",
         ]),
         didParseCell: function (data) {
-          if (data.section === 'body') { // Aplica estilos apenas às células do corpo
-            if (data.row.index % 2 === 0) { // Linhas pares
-              data.cell.styles.fillColor = [230, 247, 234]; // Verde claro
-            } else { // Linhas ímpares
-              data.cell.styles.fillColor = [255, 255, 255]; // Branco
-            }
+          if (data.section === 'body') {
+            data.cell.styles.fillColor = data.row.index % 2 === 0 ? [230, 247, 234] : [255, 255, 255];
           }
-          if (data.section === 'head') { // Estilo do cabeçalho
-            if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
-              data.cell.styles.fillColor = [0, 128, 0]; // Verde escuro
-              data.cell.styles.textColor = [255, 255, 255]; // Branco
-            }
+          if (data.section === 'head') {
+            data.cell.styles.fillColor = [0, 128, 0];
+            data.cell.styles.textColor = [255, 255, 255];
           }
         },
       });
       y = doc.lastAutoTable.finalY + 10;
     }
 
-    // Adiciona a tabela de ausentes
-    if (turma.ausentes.length > 0) {
+    // Tabela de ausentes + justificados juntos
+    const todosAusentes = [
+      ...turma.ausentes.map((a) => ({ nome: a.nome, justificativa: "" })),
+      ...turma.justificados.map((j) => ({ nome: j.nome, justificativa: j.justificativa || "" })),
+    ].sort((a, b) => a.nome.localeCompare(b.nome));
+
+    if (todosAusentes.length > 0) {
       if (y > 260) {
         doc.addPage();
         currentPage++;
@@ -285,64 +259,63 @@ async function gerarPDF(dados, logoEscolaBase64, logoPresencaBase64) {
       y += 3;
       autoTable(doc, {
         startY: y,
-        head: [["Nome"]],
-        body: turma.ausentes.map((ausente) => [ausente.nome]),
+        head: [["Nome", "Justificativa"]],
+        body: todosAusentes.map((a) => [a.nome, a.justificativa]),
         rowHeight: 6,
+        columnStyles: {
+          0: { cellWidth: 90 },
+          1: { cellWidth: 100 },
+        },
         didParseCell: function (data) {
-          if (data.section === 'body') { // Aplica estilos apenas às células do corpo
-            if (data.row.index % 2 === 0) { // Linhas pares
-              data.cell.styles.fillColor = [245, 223, 223]; // Vermelho claro
-            } else { // Linhas ímpares
-              data.cell.styles.fillColor = [255, 255, 255]; // Branco
+          if (data.section === 'body') {
+            const justificativa = data.row.raw[1];
+            if (justificativa) {
+              // Justificado → amarelo claro
+              data.cell.styles.fillColor = data.row.index % 2 === 0 ? [255, 243, 205] : [255, 249, 230];
+            } else {
+              // Ausente simples → vermelho claro
+              data.cell.styles.fillColor = data.row.index % 2 === 0 ? [245, 223, 223] : [255, 255, 255];
             }
           }
-          if (data.section === 'head') { // Estilo do cabeçalho
-            if (data.column.dataKey === 0 || data.column.dataKey === 1 || data.column.dataKey === 2) {
-              data.cell.styles.fillColor = [161, 35, 16]; // Vermelho escuro
-              data.cell.styles.textColor = [255, 255, 255]; // Branco
-            }
+          if (data.section === 'head') {
+            data.cell.styles.fillColor = [161, 35, 16];
+            data.cell.styles.textColor = [255, 255, 255];
           }
         },
       });
       y = doc.lastAutoTable.finalY + 10;
     }
 
-    if (countTurmas === dados.turmas.length) {
-      return
-    }
+    if (countTurmas === dados.turmas.length) return;
+
     doc.addPage();
     currentPage++;
     addHeader();
-    y = 50;
-    return y;
+    return 50;
   };
 
-  // Gera o PDF
   addHeader();
-  let y = await addTotalsTable(); // Adiciona a tabela de totais na primeira página
+  let y = await addTotalsTable();
 
   for (const turma of dados.turmas) {
-    if (turma.ausentes.length === 0 && turma.presentes.length === 0) {
-      return;
+    if (turma.ausentes.length === 0 && turma.presentes.length === 0 && turma.justificados.length === 0) {
+      continue;
     }
-
     y = await addTurmaDetails(turma, y);
   }
 
-  // Função para adicionar o rodapé em todas as páginas
   const addFooterToAllPages = () => {
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i); // Define a página atual
+      doc.setPage(i);
       doc.setFontSize(10);
-      doc.text(`Página ${i} de ${totalPages}`, 10, 290); // Número da página no lado esquerdo
-      doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10); // Logo do Presença no lado direito
+      doc.text(`Página ${i} de ${totalPages}`, 10, 290);
+      doc.addImage(logoPresencaBase64, "PNG", 170, 280, 30, 10);
     }
   };
 
   addFooterToAllPages();
 
-  // Retorna o conteúdo do PDF como um buffer
   const pdfContent = doc.output("arraybuffer");
   return Buffer.from(pdfContent);
 }

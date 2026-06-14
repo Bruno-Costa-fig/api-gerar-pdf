@@ -21,42 +21,44 @@ app.post('/gerarPDF', async (req, res) => {
   const gerarPDF = require('./services/gerarPDF');
 
   try {
-    // Verifica se os dados foram enviados
     const dados = req.body;
-    
+
     if (!dados) {
       res.status(400).send('Dados inválidos ou não informados');
       return;
     }
 
-    let logoEscolaBase64 = dados.LogoEscolaBase64 ?? logoPresencaBase64; // Logo padrão
-    // Converte as propriedades do JSON para letras minúsculas
+    let logoEscolaBase64 = dados.LogoEscolaBase64 ?? logoPresencaBase64;
+
     const dadosTotais = {
       empresa: dados.Empresa,
       organizationId: dados.OrganizationId,
       totalPresentes: dados.TotalPresentes,
       totalAusentes: dados.TotalAusentes,
+      totalJustificados: dados.TotalJustificados,
       data: dados.Data,
       turmas: dados.Turmas.map((turma) => ({
         turma: turma.Turma,
         totalPresentes: turma.TotalPresentes,
         totalAusentes: turma.TotalAusentes,
+        totalJustificados: turma.TotalJustificados,
         presentes: turma.Presentes.map((p) => ({
           nome: p.Nome,
           horarioEntrada: p.HorarioEntrada,
           horarioSaida: p.HorarioSaida,
         })),
+        justificados: (turma.Justificados ?? []).map((j) => ({
+          nome: j.Nome,
+          justificativa: j.Justificativa,
+        })),
         ausentes: turma.Ausentes.map((a) => ({
           nome: a.Nome,
-          horarioEntrada: a.HorarioEntrada,
         })),
       })),
     };
 
-    // Gera o conteúdo do PDF
     const pdfBuffer = await gerarPDF(dadosTotais, logoEscolaBase64, logoPresencaBase64);
 
-    // Define o nome do arquivo
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="relatorio.pdf"');
     res.setHeader('Content-Length', pdfBuffer.length);
@@ -64,8 +66,6 @@ app.post('/gerarPDF', async (req, res) => {
   } catch (error) {
     console.error('Erro ao gerar o PDF:', error);
     res.status(500).send('Erro ao gerar o PDF');
-  } finally {
-    
   }
 });
 
