@@ -17,6 +17,9 @@ async function gerarCarteirinhaModelo2(nomeAluno, nomeTurma, qrCodeBase64, outpu
         case "organization-3":
             frentePath = path.join(__dirname, "assets", "modelos", "fonsecamota", "frente.png");
             break;
+        case "organization-4":
+            frentePath = path.join(__dirname, "assets", "modelos", "alfredo", "frente.png");
+            break;
     }
     // Carregar a imagem de fundo
     console.log("frentePath:", frentePath);
